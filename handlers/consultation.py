@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
-from database import Lead, async_session
+from database import Lead, get_session
 from keyboards.inline import back_to_menu_kb, main_menu_kb
 
 router = Router()
@@ -52,7 +52,7 @@ async def process_contact(
     data = await state.get_data()
     await state.clear()
 
-    async with async_session() as session:
+    async with get_session() as session:
         lead = Lead(
             telegram_id=message.from_user.id,
             name=data["name"],

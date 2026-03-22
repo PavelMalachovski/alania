@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
 
-from database import User, async_session
+from database import User, get_session
 from keyboards.inline import main_menu_kb
 
 router = Router()
@@ -19,7 +19,7 @@ WELCOME_TEXT = (
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    async with async_session() as session:
+    async with get_session() as session:
         user = await session.get(User, message.from_user.id)
         if not user:
             user = User(

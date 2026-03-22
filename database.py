@@ -55,6 +55,10 @@ async def init_db(database_url: str) -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
+def get_session() -> AsyncSession:
+    return async_session()
+
+
 async def close_db() -> None:
     global engine
     if engine:
