@@ -46,6 +46,9 @@ class Lead(Base):
 
 async def init_db(database_url: str) -> None:
     global engine, async_session
+    # Railway provides postgresql:// but asyncpg needs postgresql+asyncpg://
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
     engine = create_async_engine(database_url)
     async_session = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as conn:
