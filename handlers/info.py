@@ -1,41 +1,66 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from keyboards.inline import back_to_menu_kb
+from keyboards.inline import channel_kb, game_kb, gift_kb
 
 router = Router()
 
-ABOUT_TEXT = (
-    "🔍 <b>Обо мне</b>\n\n"
-    "Я — эксперт с многолетним опытом работы. "
-    "Моя методология основана на индивидуальном подходе к каждому клиенту.\n\n"
-    "📌 <b>Кейсы:</b>\n"
-    "• Клиент А — увеличение продаж на 40%\n"
-    "• Клиент Б — выход из кризиса за 3 месяца\n"
-    "• Клиент В — масштабирование бизнеса x2\n\n"
-    "Готов записаться на консультацию? Нажми кнопку ниже!"
+GAME_TEXT = (
+    "<b>Узнать больше про игру VECHNOST</b>\n\n"
+    "Если ты:\n"
+    "🔹 снова выбираешь «не того» человека\n"
+    "🔹 чувствуешь, что в отношениях стало скучно\n"
+    "🔹 или хочешь понимать партнёра лучше\n\n"
+    "VECHNOST — это не просто игра.\n"
+    "Это инструмент, основанный на:\n"
+    "🔹 психологии привязанности\n"
+    "🔹 поведенческих сценариях\n"
+    "🔹 и глубинной коммуникации\n\n"
+    "300+ терапевтических вопросов и заданий, разделенных на 4 уровня, "
+    "которые показывают, как человек думает и строит отношения "
+    "уже с самого начала общения.\n\n"
+    "Я собирала их через личный опыт, терапию "
+    "и десятки диалогов с людьми и парами.\n"
+    "• подробнее — в хайлайте игра"
 )
 
-PRODUCTS_TEXT = (
-    "📦 <b>Дополнительные продукты</b>\n\n"
-    "1️⃣ <b>Мини-курс «Основы»</b>\n"
-    "Базовый курс для новичков. Идеально для старта.\n\n"
-    "2️⃣ <b>Гайд «Пошаговый план»</b>\n"
-    "Пошаговая инструкция для самостоятельной работы.\n\n"
-    "3️⃣ <b>Интенсив «Прорыв»</b>\n"
-    "Глубокая групповая программа с обратной связью.\n\n"
-    "Для покупки или подробной информации свяжитесь со мной "
-    "через запись на консультацию."
+CHANNEL_TEXT = (
+    "<b>Бесплатный Telegram-канал</b>\n\n"
+    "В своём канале я делюсь ченнелингами, энергиями месяца, "
+    "полезными материалами и практиками.\n\n"
+    "Они помогут тебе гармонизировать состояние и, возможно, найти ответы "
+    "на вопросы даже раньше, чем они у тебя возникнут."
+)
+
+GIFT_TEXT = (
+    "<b>Получить подарок 🎁</b>\n\n"
+    "Рада, что ты решила забрать этот инструмент! "
+    "Работа над собой — это непростой путь, а наше подсознание зачастую "
+    "прячет от нас реальные причины проблем.\n\n"
+    "Просто сесть и подумать может быть недостаточно. Нужно задать себе именно "
+    "те «правильные» вопросы, на которые тело и психика готовы дать честный ответ.\n\n"
+    "Я создала для тебя «Карту твоего запроса». Этот гайд поможет тебе "
+    "сформулировать истинный запрос для дальнейшего пути самопознания. "
+    "Грубо говоря, это техническое задание для тебя или специалиста, "
+    "с которым ты захочешь дальше поработать.\n\n"
+    "А также часть моей работы с клиентами, так как именно на основе этого гайда "
+    "мы будем формировать запрос для консультаций и личного менторства."
 )
 
 
-@router.callback_query(F.data == "info")
-async def cb_info(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(ABOUT_TEXT, reply_markup=back_to_menu_kb())
+@router.callback_query(F.data == "game")
+async def cb_game(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(GAME_TEXT, reply_markup=game_kb())
     await callback.answer()
 
 
-@router.callback_query(F.data == "products")
-async def cb_products(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(PRODUCTS_TEXT, reply_markup=back_to_menu_kb())
+@router.callback_query(F.data == "channel")
+async def cb_channel(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(CHANNEL_TEXT, reply_markup=channel_kb())
+    await callback.answer()
+
+
+@router.callback_query(F.data == "gift")
+async def cb_gift(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(GIFT_TEXT, reply_markup=gift_kb())
     await callback.answer()

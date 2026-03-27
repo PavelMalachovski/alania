@@ -1,79 +1,127 @@
-from aiogram import Bot, F, Router, html
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram import F, Router
+from aiogram.types import CallbackQuery
 
-from database import Lead, get_session
-from keyboards.inline import back_to_menu_kb, main_menu_kb
+from keyboards.inline import (
+    consultation_kb,
+    consultation_sub_kb,
+    mentoring_kb,
+    personal_work_kb,
+)
 
 router = Router()
 
+PERSONAL_WORK_TEXT = (
+    "В личной работе я использую комплексный подход, работая сразу на нескольких уровнях: "
+    "тело, энергия и подсознание. Это позволяет достигать фундаментальных изменений и менять "
+    "не только состояние, но и логику выбора, которая в дальнейшем меняет результат и влияет "
+    "на состояние получением релевантного и желаемого опыта.\n\n"
+    "Выбери подходящий тебе формат:"
+)
 
-class ConsultationForm(StatesGroup):
-    name = State()
-    request_text = State()
-    contact_info = State()
+CONSULTATION_TEXT = (
+    "<b>Личная консультация «Точка сборки»</b>\n\n"
+    "Личная консультация «Точка сборки» — это глубокое погружение через соединение "
+    "нескольких форматов.\n\n"
+    "Я работаю с тобой через ченнелинг, помогая найти ответы на твои вопросы "
+    "и внедрить в жизнь новые действия используя коучинговые инструменты.\n\n"
+    "Сессия длится 70–90 минут и проходит онлайн (видеозвонок).\n"
+    "Стоимость: 111 евро.\n\n"
+    "Во время встречи мы можем разобрать один или несколько запросов. "
+    "Ты получишь конкретные рекомендации, практики и методы, которые дадут "
+    "новый результат в жизни."
+)
+
+CONSULTATION_WHO_TEXT = (
+    "<b>🎯 Кому подойдет?</b>\n\n"
+    "Этот формат для тебя, если ты:\n\n"
+    "• Выгорела и не можешь найти ответы на свои вопросы.\n"
+    "• Потерялась и не знаешь, куда дальше двигаться.\n"
+    "• Устала прорабатывать одни и те же травмы и повторяющиеся ситуации.\n"
+    "• Чувствуешь, что способна на большее, но не понимаешь как его достичь "
+    "и какое твое предназначение.\n"
+    "• Знаешь, что нужно делать, но не можешь начать.\n"
+    "• Хочешь научиться легкости и получить ясность в жизни."
+)
+
+CONSULTATION_HOW_TEXT = (
+    "<b>🔄 Как проходит сессия?</b>\n\n"
+    "Сессия проходит онлайн через видеосвязь.\n"
+    "Длительность: 70–90 минут.\n\n"
+    "Мы работаем на нескольких уровнях: тело, психика и энергии. "
+    "Я отвечаю на твои вопросы через ченнелинг, мы разбираем твой запрос или проблему, "
+    "находя не только ответы на вопросы, но и выстраивая новую стратегию действия.\n\n"
+    "<b>Важно:</b> Для эффективной работы у тебя должен быть сформирован запрос. "
+    "Если его нет — мы сформируем его на встрече, либо я рекомендую тебе сначала "
+    "забрать мой бесплатный гайд «Карта запроса» в главном меню — "
+    "он идеально помогает выявить ключевые темы.\n\n"
+    "После сессии я даю рекомендации и практики, которые составляю специально для тебя, "
+    "чтобы закрепить полученный эффект и результат."
+)
+
+CONSULTATION_REVIEWS_TEXT = (
+    "<b>💬 Отзывы</b>\n\n"
+    "Раздел отзывов скоро будет дополнен."
+)
+
+MENTORING_TEXT = (
+    "<b>Личное менторство (4 недели)</b>\n\n"
+    "Личное менторство — это программа для тех, кто готов к кардинальным, "
+    "фундаментальным изменениям.\n\n"
+    "Часто нам не хватает не просто информации и ответов на вопросы, "
+    "а помощи и поддержки в том, чтобы внедрить новые привычки в ежедневную жизнь, "
+    "научиться не просто получать вдохновение, но и реализовывать то, "
+    "что мы давно задумали, но никак не могли начать.\n\n"
+    "<b>Что тебя ждет:</b>\n"
+    "• 4 глубокие терапевтические встречи (каждая по ~2 часа).\n"
+    "• Сопровождение и поддержка в личных сообщениях по возникающим вопросам "
+    "между сессиями.\n"
+    "• Домашние задания, чтобы ты не сбилась с пути и встроила в жизнь "
+    "новый способ мышления.\n\n"
+    "Мы перестраиваем старую логику выбора и действия, которые больше не работают, "
+    "и формируем новые паттерны поведения и привычки.\n\n"
+    "Работа идет на всех уровнях: энергия, психика, тело.\n\n"
+    "Для тех, кому нужны не разовые решения, а новая жизнь и индивидуальный подход, "
+    "созданный именно под твой запрос."
+)
+
+
+@router.callback_query(F.data == "personal_work")
+async def cb_personal_work(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(PERSONAL_WORK_TEXT, reply_markup=personal_work_kb())
+    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation")
-async def cb_consultation_start(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.set_state(ConsultationForm.name)
+async def cb_consultation(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(CONSULTATION_TEXT, reply_markup=consultation_kb())
+    await callback.answer()
+
+
+@router.callback_query(F.data == "consultation_who")
+async def cb_consultation_who(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
-        "📝 <b>Запись на консультацию</b>\n\n"
-        "Шаг 1/3: Как тебя зовут?"
+        CONSULTATION_WHO_TEXT, reply_markup=consultation_sub_kb()
     )
     await callback.answer()
 
 
-@router.message(ConsultationForm.name)
-async def process_name(message: Message, state: FSMContext) -> None:
-    await state.update_data(name=message.text)
-    await state.set_state(ConsultationForm.request_text)
-    await message.answer(
-        f"Приятно познакомиться, {html.bold(html.quote(message.text))}!\n\n"
-        "Шаг 2/3: Опиши кратко свой запрос или проблему."
+@router.callback_query(F.data == "consultation_how")
+async def cb_consultation_how(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(
+        CONSULTATION_HOW_TEXT, reply_markup=consultation_sub_kb()
     )
+    await callback.answer()
 
 
-@router.message(ConsultationForm.request_text)
-async def process_request(message: Message, state: FSMContext) -> None:
-    await state.update_data(request_text=message.text)
-    await state.set_state(ConsultationForm.contact_info)
-    await message.answer(
-        "Шаг 3/3: Укажи удобный способ связи\n"
-        "(номер телефона или ник в Telegram)."
+@router.callback_query(F.data == "consultation_reviews")
+async def cb_consultation_reviews(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(
+        CONSULTATION_REVIEWS_TEXT, reply_markup=consultation_sub_kb()
     )
+    await callback.answer()
 
 
-@router.message(ConsultationForm.contact_info)
-async def process_contact(
-    message: Message, state: FSMContext, bot: Bot, admin_id: int
-) -> None:
-    data = await state.get_data()
-    await state.clear()
-
-    async with get_session() as session:
-        lead = Lead(
-            telegram_id=message.from_user.id,
-            name=data["name"],
-            request_text=data["request_text"],
-            contact_info=message.text,
-        )
-        session.add(lead)
-        await session.commit()
-
-    await message.answer(
-        "✅ Отлично! Твоя заявка принята.\n"
-        "Я свяжусь с тобой в ближайшее время!",
-        reply_markup=back_to_menu_kb(),
-    )
-
-    # Уведомление администратору
-    admin_text = (
-        "🔔 <b>Новая заявка на консультацию!</b>\n\n"
-        f"👤 Имя: {html.quote(data['name'])}\n"
-        f"📩 Контакт: {html.quote(message.text)}\n"
-        f"📝 Запрос: {html.quote(data['request_text'])}\n"
-        f"🆔 Telegram ID: {message.from_user.id}"
-    )
-    await bot.send_message(admin_id, admin_text)
+@router.callback_query(F.data == "mentoring")
+async def cb_mentoring(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(MENTORING_TEXT, reply_markup=mentoring_kb())
+    await callback.answer()
