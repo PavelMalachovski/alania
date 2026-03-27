@@ -1,11 +1,11 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-# ── Внешние ссылки (замените на актуальные) ──────────────────────────
-BOOKING_URL = "https://t.me/lana_leonovich"
-DM_URL = "https://t.me/lana_leonovich"
-GAME_URL = "https://t.me/lana_leonovich"
-CHANNEL_URL = "https://t.me/lana_leonovich"
-GUIDE_URL = "https://t.me/lana_leonovich"
+# ── Внешние ссылки ───────────────────────────────────────────────────
+BOOKING_URL = "https://t.me/LanaLeonovich"
+DM_URL = "https://t.me/LanaLeonovich"
+GAME_URL = "https://t.me/tvoya_vechnost_bot"
+CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
+GUIDE_URL = "https://t.me/c/2260920571/433"
 
 
 def welcome_kb():
@@ -84,4 +84,16 @@ def gift_kb():
     builder.button(text="📥 Забрать гайд", url=GUIDE_URL)
     builder.button(text="⬅️ Назад", callback_data="start_menu")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def reviews_kb(page: int, total: int):
+    builder = InlineKeyboardBuilder()
+    if page > 0:
+        builder.button(text="⬅️ Пред.", callback_data=f"review_{page - 1}")
+    if page < total - 1:
+        builder.button(text="➡️ След.", callback_data=f"review_{page + 1}")
+    builder.button(text="📅 Записаться", url=BOOKING_URL)
+    builder.button(text="⬅️ Назад", callback_data="consultation")
+    builder.adjust(2, 1, 1)
     return builder.as_markup()

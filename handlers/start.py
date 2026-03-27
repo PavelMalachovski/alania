@@ -8,7 +8,7 @@ from keyboards.inline import main_menu_kb, welcome_kb
 router = Router()
 
 WELCOME_TEXT = (
-    "Привет, дорогая! 👋\n\n"
+    "Привет, дорогая! 🤍\n\n"
     "Этот бот создан для того, чтобы помочь тебе соединиться с собой, "
     "найти ответы на важные вопросы и получить поддержку на твоем пути самопознания.\n\n"
     "Чтобы начать наше знакомство и узнать про полезные инструменты, "
@@ -43,5 +43,5 @@ async def cmd_start(message: Message) -> None:
 
 @router.callback_query(lambda c: c.data == "start_menu")
 async def cb_start_menu(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
+    await callback.message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
     await callback.answer()
