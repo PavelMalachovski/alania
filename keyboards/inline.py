@@ -8,12 +8,6 @@ CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
 GUIDE_URL = "https://t.me/c/2260920571/433"
 
 
-def welcome_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Старт", callback_data="start_menu")
-    return builder.as_markup()
-
-
 def main_menu_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Узнать больше о личной работе", callback_data="personal_work")
