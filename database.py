@@ -1,6 +1,14 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
+from sqlalchemy import (
+    BigInteger,
+    Date,
+    DateTime,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
     AsyncSession,
@@ -39,6 +47,23 @@ class Lead(Base):
     contact_info: Mapped[str] = mapped_column(String(255))
     request_text: Mapped[str] = mapped_column(String(2000))
     status: Mapped[str] = mapped_column(String(50), default="new")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Booking(Base):
+    """Запись на слот консультации. Статусы:
+    new — слот выбран; pay_claimed — нажал «Я оплатил(а)»; confirmed — Лана подтвердила."""
+
+    __tablename__ = "bookings"
+    __table_args__ = (UniqueConstraint("slot_date", "slot_time", name="uq_booking_slot"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    slot_date: Mapped[date] = mapped_column(Date)
+    slot_time: Mapped[str] = mapped_column(String(5))
+    status: Mapped[str] = mapped_column(String(20), default="new")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
