@@ -34,6 +34,7 @@ def consultation_kb():
     builder.button(text="Как проходит сессия?", callback_data="consultation_how")
     builder.button(text="Отзывы", callback_data="consultation_reviews")
     builder.button(text="Записаться", callback_data="consultation_pay")
+    builder.button(text="Оставить заявку", callback_data="lead_start:consultation")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="personal_work")
     builder.adjust(1)
@@ -61,7 +62,7 @@ def consultation_sub_kb(back_to: str = "consultation"):
 
 def consultation_how_kb():
     builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", url=GUIDE_URL)
+    builder.button(text="Забрать гайд", callback_data="get_guide")
     builder.button(text="Записаться", callback_data="consultation_pay")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="consultation")
@@ -71,6 +72,7 @@ def consultation_how_kb():
 
 def mentoring_kb():
     builder = InlineKeyboardBuilder()
+    builder.button(text="Оставить заявку", callback_data="lead_start:mentoring")
     builder.button(text="Узнать больше в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="personal_work")
     builder.adjust(1)
@@ -95,8 +97,49 @@ def channel_kb():
 
 def gift_kb():
     builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", url=GUIDE_URL)
+    builder.button(text="Забрать гайд", callback_data="get_guide")
     builder.button(text="⇦ Назад", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def guide_link_kb():
+    """Фолбэк, пока админ не загрузил файл гайда через /set_guide."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Открыть гайд", url=GUIDE_URL)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+# ── Заявка (FSM) ─────────────────────────────────────────────────────
+def lead_cancel_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Отменить заявку", callback_data="lead_cancel")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def lead_contact_kb(has_username: bool):
+    builder = InlineKeyboardBuilder()
+    if has_username:
+        builder.button(text="Оставить мой Telegram", callback_data="lead_use_tg")
+    builder.button(text="Отменить заявку", callback_data="lead_cancel")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def lead_done_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⇦ В главное меню", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+# ── Админ ────────────────────────────────────────────────────────────
+def broadcast_confirm_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Отправить всем", callback_data="broadcast_confirm")
+    builder.button(text="❌ Отменить", callback_data="broadcast_cancel")
     builder.adjust(1)
     return builder.as_markup()
 

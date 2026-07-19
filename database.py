@@ -44,6 +44,24 @@ class Lead(Base):
     )
 
 
+class Setting(Base):
+    __tablename__ = "settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255))
+
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    action: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 async def init_db(database_url: str) -> None:
     global engine, async_session
     # Railway provides postgresql:// but asyncpg needs postgresql+asyncpg://
@@ -56,7 +74,25 @@ async def init_db(database_url: str) -> None:
 
 
 def get_session() -> AsyncSession:
+    if async_session is None:
+        raise RuntimeError("Database is not initialized — call init_db() first")
     return async_session()
+
+
+async def get_setting(key: str) -> str | None:
+    async with get_session() as session:
+        setting = await session.get(Setting, key)
+        return setting.value if setting else None
+
+
+async def set_setting(key: str, value: str) -> None:
+    async with get_session() as session:
+        setting = await session.get(Setting, key)
+        if setting:
+            setting.value = value
+        else:
+            session.add(Setting(key=key, value=value))
+        await session.commit()
 
 
 async def close_db() -> None:

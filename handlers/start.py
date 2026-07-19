@@ -1,5 +1,6 @@
-from aiogram import Router
-from aiogram.filters import CommandStart
+from aiogram import F, Router
+from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
@@ -18,7 +19,8 @@ MAIN_MENU_TEXT = (
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message) -> None:
+async def cmd_start(message: Message, state: FSMContext) -> None:
+    await state.clear()
     async with get_session() as session:
         user = await session.get(User, message.from_user.id)
         if not user:
@@ -28,12 +30,19 @@ async def cmd_start(message: Message) -> None:
                 full_name=message.from_user.full_name,
             )
             session.add(user)
-            await session.commit()
+        else:
+            user.username = message.from_user.username
+            user.full_name = message.from_user.full_name
+        await session.commit()
 
     await message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
 
 
-@router.callback_query(lambda c: c.data == "start_menu")
+@router.message(Command("id"))
+async def cmd_id(message: Message) -> None:
+    await message.answer(f"Твой Telegram ID: <code>{message.from_user.id}</code>")
+
+
+@router.callback_query(F.data == "start_menu")
 async def cb_start_menu(callback: CallbackQuery) -> None:
     await callback.message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
-    await callback.answer()
