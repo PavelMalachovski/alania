@@ -1,7 +1,8 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from keyboards.inline import channel_kb, game_kb, gift_kb
+from database import get_setting
+from keyboards.inline import channel_kb, game_kb, gift_kb, guide_link_kb
 
 router = Router()
 
@@ -51,16 +52,29 @@ GIFT_TEXT = (
 @router.callback_query(F.data == "game")
 async def cb_game(callback: CallbackQuery) -> None:
     await callback.message.edit_text(GAME_TEXT, reply_markup=game_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data == "channel")
 async def cb_channel(callback: CallbackQuery) -> None:
     await callback.message.edit_text(CHANNEL_TEXT, reply_markup=channel_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data == "gift")
 async def cb_gift(callback: CallbackQuery) -> None:
     await callback.message.edit_text(GIFT_TEXT, reply_markup=gift_kb())
-    await callback.answer()
+
+
+@router.callback_query(F.data == "get_guide")
+async def cb_get_guide(callback: CallbackQuery) -> None:
+    file_id = await get_setting("guide_file_id")
+    if file_id:
+        await callback.message.answer_document(
+            file_id,
+            caption="✦ Твой гайд «Карта твоего запроса» 🤍",
+        )
+    else:
+        # фолбэк, пока админ не загрузил файл через /set_guide
+        await callback.message.answer(
+            "✦ Забрать гайд можно по ссылке ⇩",
+            reply_markup=guide_link_kb(),
+        )

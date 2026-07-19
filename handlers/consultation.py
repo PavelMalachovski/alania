@@ -137,13 +137,11 @@ MENTORING_TEXT = (
 @router.callback_query(F.data == "personal_work")
 async def cb_personal_work(callback: CallbackQuery) -> None:
     await callback.message.edit_text(PERSONAL_WORK_TEXT, reply_markup=personal_work_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation")
 async def cb_consultation(callback: CallbackQuery) -> None:
     await callback.message.edit_text(CONSULTATION_TEXT, reply_markup=consultation_kb())
-    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation_who")
@@ -151,7 +149,6 @@ async def cb_consultation_who(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         CONSULTATION_WHO_TEXT, reply_markup=consultation_sub_kb()
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation_how")
@@ -159,7 +156,6 @@ async def cb_consultation_how(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         CONSULTATION_HOW_TEXT, reply_markup=consultation_how_kb()
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation_reviews")
@@ -167,16 +163,19 @@ async def cb_consultation_reviews(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         REVIEWS[0], reply_markup=reviews_kb(0, len(REVIEWS))
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("review_"))
 async def cb_review_page(callback: CallbackQuery) -> None:
-    page = int(callback.data.split("_")[1])
+    try:
+        page = int(callback.data.split("_", 1)[1])
+    except ValueError:
+        return
+    if not 0 <= page < len(REVIEWS):
+        return
     await callback.message.edit_text(
         REVIEWS[page], reply_markup=reviews_kb(page, len(REVIEWS))
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "consultation_pay")
@@ -189,10 +188,8 @@ async def cb_consultation_pay(callback: CallbackQuery) -> None:
         "нужно написать в ЛС Лане. Ссылку можешь найти по кнопке ниже.",
         reply_markup=consultation_pay_kb(),
     )
-    await callback.answer()
 
 
 @router.callback_query(F.data == "mentoring")
 async def cb_mentoring(callback: CallbackQuery) -> None:
     await callback.message.edit_text(MENTORING_TEXT, reply_markup=mentoring_kb())
-    await callback.answer()
