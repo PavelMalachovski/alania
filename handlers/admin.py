@@ -9,9 +9,10 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
-from database import User, get_session, set_setting
+from database import Booking, User, get_session, set_setting
 from filters import IsAdmin
-from keyboards.inline import broadcast_confirm_kb
+from handlers.booking import day_label
+from keyboards.inline import broadcast_confirm_kb, lead_done_kb
 
 router = Router()
 router.message.filter(IsAdmin())
@@ -69,6 +70,47 @@ async def guide_file(message: Message, state: FSMContext) -> None:
 @router.message(GuideForm.waiting_file)
 async def guide_not_file(message: Message) -> None:
     await message.answer("Нужен именно файл (документ). Отмена — /cancel")
+
+
+# ── Подтверждение оплаты слота ───────────────────────────────────────
+@router.callback_query(F.data.startswith("confirm_pay:"))
+async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking:
+            await callback.answer("Запись не найдена", show_alert=True)
+            return
+        if booking.status == "confirmed":
+            await callback.answer("Уже подтверждено")
+            return
+        booking.status = "confirmed"
+        await session.commit()
+        user_id, d, t = booking.telegram_id, booking.slot_date, booking.slot_time
+
+    try:
+        await bot.send_message(
+            user_id,
+            "○─── ☾ ───○\n\n"
+            "<b>✦ Вы оплатили, спасибо!</b> 🤍\n\n"
+            f"Твоя запись подтверждена: <b>{day_label(d)} в {t}</b> "
+            "(время Прага / CET).\n\n"
+            "Лана свяжется с тобой перед сессией и пришлёт ссылку "
+            "на видеозвонок. До встречи ✦",
+            reply_markup=lead_done_kb(),
+        )
+    except TelegramAPIError:
+        await callback.message.answer(
+            "⚠️ Оплата подтверждена, но сообщение клиенту не доставлено "
+            "(возможно, он заблокировал бота)."
+        )
+
+    await callback.message.edit_text(
+        callback.message.html_text + "\n\n✅ <b>Оплата подтверждена</b>"
+    )
 
 
 # ── Рассылка ─────────────────────────────────────────────────────────

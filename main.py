@@ -11,6 +11,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import ErrorEvent
 
 from database import close_db, init_db
+from followup import followup_loop
 from handlers import setup_routers
 from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
 
@@ -49,9 +50,11 @@ async def main() -> None:
         logging.exception("Unhandled error while processing update: %s", event.exception)
         return True
 
+    followup_task = asyncio.create_task(followup_loop(bot))
     try:
         await dp.start_polling(bot, admin_ids=admin_ids)
     finally:
+        followup_task.cancel()
         await close_db()
         await bot.session.close()
 

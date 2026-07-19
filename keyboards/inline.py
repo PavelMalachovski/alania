@@ -33,7 +33,7 @@ def consultation_kb():
     builder.button(text="Кому подойдет?", callback_data="consultation_who")
     builder.button(text="Как проходит сессия?", callback_data="consultation_how")
     builder.button(text="Отзывы", callback_data="consultation_reviews")
-    builder.button(text="Записаться", callback_data="consultation_pay")
+    builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="Оставить заявку", callback_data="lead_start:consultation")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="personal_work")
@@ -41,19 +41,56 @@ def consultation_kb():
     return builder.as_markup()
 
 
-def consultation_pay_kb():
+# ── Запись на слот (календарь) ───────────────────────────────────────
+def booking_days_kb(days: "list[tuple[str, str]]"):
+    """days — список (подпись «Пн 21.07», iso-дата)."""
+    builder = InlineKeyboardBuilder()
+    for label, iso in days:
+        builder.button(text=label, callback_data=f"book_day:{iso}")
+    builder.button(text="⇦ Назад", callback_data="consultation")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def booking_times_kb(iso_date: str, free_times: "list[str]"):
+    builder = InlineKeyboardBuilder()
+    for t in free_times:
+        builder.button(text=t, callback_data=f"book_slot:{iso_date}:{t}")
+    builder.button(text="⇦ К выбору дня", callback_data="booking_start")
+    builder.adjust(3, 1)
+    return builder.as_markup()
+
+
+def booking_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="Оплатить в рублях", url=PAY_RUB_URL)
     builder.button(text="Оплатить в евро", url=PAY_EUR_URL)
+    builder.button(text="✓ Я оплатил(а)", callback_data=f"paid:{booking_id}")
     builder.button(text="Написать в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data="consultation")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def admin_confirm_pay_kb(booking_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Подтвердить оплату", callback_data=f"confirm_pay:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def followup_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Записаться", callback_data="booking_start")
+    builder.button(text="Оставить заявку", callback_data="lead_start:consultation")
+    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
+    builder.button(text="⇦ В главное меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 
 
 def consultation_sub_kb(back_to: str = "consultation"):
     builder = InlineKeyboardBuilder()
-    builder.button(text="Записаться", callback_data="consultation_pay")
+    builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data=back_to)
     builder.adjust(1)
@@ -63,7 +100,7 @@ def consultation_sub_kb(back_to: str = "consultation"):
 def consultation_how_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Забрать гайд", callback_data="get_guide")
-    builder.button(text="Записаться", callback_data="consultation_pay")
+    builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="consultation")
     builder.adjust(1)
@@ -150,7 +187,7 @@ def reviews_kb(page: int, total: int):
         builder.button(text="⬅️ Пред.", callback_data=f"review_{page - 1}")
     if page < total - 1:
         builder.button(text="➡️ След.", callback_data=f"review_{page + 1}")
-    builder.button(text="Записаться", callback_data="consultation_pay")
+    builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="⇦ Назад", callback_data="consultation")
     builder.adjust(2, 1, 1)
     return builder.as_markup()

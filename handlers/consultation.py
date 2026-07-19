@@ -4,7 +4,6 @@ from aiogram.types import CallbackQuery
 from keyboards.inline import (
     consultation_kb,
     consultation_how_kb,
-    consultation_pay_kb,
     consultation_sub_kb,
     mentoring_kb,
     personal_work_kb,
@@ -175,18 +174,6 @@ async def cb_review_page(callback: CallbackQuery) -> None:
         return
     await callback.message.edit_text(
         REVIEWS[page], reply_markup=reviews_kb(page, len(REVIEWS))
-    )
-
-
-@router.callback_query(F.data == "consultation_pay")
-async def cb_consultation_pay(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(
-        "○─── ☾ ───○\n\n"
-        "<b>✦ Оплата консультации</b>\n\n"
-        "Выбери удобный способ оплаты ⇩\n\n"
-        "‼️ После оплаты для выбора подходящего времени и даты "
-        "нужно написать в ЛС Лане. Ссылку можешь найти по кнопке ниже.",
-        reply_markup=consultation_pay_kb(),
     )
 
 
