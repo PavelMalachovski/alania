@@ -192,9 +192,9 @@ def test_price_text():
 
 
 def test_format_slot_summer_cest():
-    # 10:00 UTC = 12:00 Прага (CEST, UTC+2) = 14:00 Мск летом
+    # 10:00 UTC = 12:00 Прага (CEST, UTC+2) = 13:00 Мск (Мск всегда UTC+3, летом разница 1ч)
     dt = datetime(2026, 7, 27, 10, 0, tzinfo=timezone.utc)
-    assert format_slot_human(dt) == "Пн 27.07 · 12:00 Прага (14:00 Мск)"
+    assert format_slot_human(dt) == "Пн 27.07 · 12:00 Прага (13:00 Мск)"
 
 
 def test_format_slot_winter_cet():
