@@ -1,12 +1,10 @@
-from datetime import date, datetime
+from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
-    Date,
     DateTime,
     ForeignKey,
     String,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.ext.asyncio import (
@@ -53,17 +51,20 @@ class Lead(Base):
 
 
 class Booking(Base):
-    """Запись на слот консультации. Статусы:
-    new — слот выбран; pay_claimed — нажал «Я оплатил(а)»; confirmed — Лана подтвердила."""
+    """Запись на слот. Статусы:
+    held — слот держится за клиентом на время оплаты (held_until);
+    pay_claimed — нажал «Я оплатил(а)», событие в календаре создано;
+    confirmed — Лана подтвердила; cancelled — Лана отклонила / отменено."""
 
     __tablename__ = "bookings"
-    __table_args__ = (UniqueConstraint("slot_date", "slot_time", name="uq_booking_slot"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
-    slot_date: Mapped[date] = mapped_column(Date)
-    slot_time: Mapped[str] = mapped_column(String(5))
-    status: Mapped[str] = mapped_column(String(20), default="new")
+    slot_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), default="held")
+    held_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    google_event_id: Mapped[str | None] = mapped_column(String(1024))
+    calendar_sync_failed: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
