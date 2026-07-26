@@ -10,6 +10,7 @@ from aiogram.exceptions import TelegramAPIError
 from sqlalchemy import select
 
 from database import Booking, Event, Lead, get_session
+from formatting import format_slot_human
 from keyboards.inline import followup_kb
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,8 @@ logger = logging.getLogger(__name__)
 FOLLOWUP_DELAY = timedelta(hours=1)
 FOLLOWUP_WINDOW = timedelta(hours=48)  # старые клики не трогаем (например, после редеплоя)
 CHECK_INTERVAL = 600  # секунд между проверками
+REMINDER_WINDOW_START = timedelta(hours=0)
+REMINDER_LEAD = timedelta(hours=24)
 
 FOLLOWUP_TEXT = (
     "○─── ☾ ───○\n\n"
@@ -73,10 +76,51 @@ async def followup_pass(bot: Bot, now: datetime | None = None) -> int:
     return sent
 
 
+async def reminder_pass(bot: Bot, now: datetime | None = None) -> int:
+    now = now or datetime.now(timezone.utc)
+    horizon = now + REMINDER_LEAD
+    async with get_session() as session:
+        bookings = (await session.execute(
+            select(Booking).where(Booking.status == "confirmed")
+        )).scalars().all()
+    sent = 0
+    for b in bookings:
+        slot = _as_utc(b.slot_start)
+        if not (now < slot <= horizon):
+            continue
+        # не слать повторно: уже есть отметка reminder_sent по этому пользователю
+        async with get_session() as session:
+            already = (await session.execute(
+                select(Event).where(
+                    Event.telegram_id == b.telegram_id,
+                    Event.action == "reminder_sent",
+                    Event.created_at >= now - timedelta(days=2),
+                )
+            )).first()
+        if already:
+            continue
+        try:
+            await bot.send_message(
+                b.telegram_id,
+                "○─── ☾ ───○\n\n"
+                "Напоминаю: завтра у тебя консультация 🤍\n"
+                f"<b>{format_slot_human(slot)}</b>\n\n"
+                "Лана пришлёт ссылку на видеозвонок перед началом. До встречи ✦",
+            )
+            sent += 1
+        except TelegramAPIError:
+            logger.info("Напоминание %s не доставлено", b.telegram_id)
+        async with get_session() as session:
+            session.add(Event(telegram_id=b.telegram_id, action="reminder_sent"))
+            await session.commit()
+    return sent
+
+
 async def followup_loop(bot: Bot) -> None:
     while True:
         try:
             await followup_pass(bot)
+            await reminder_pass(bot)
         except Exception:
-            logger.exception("Followup pass failed")
+            logger.exception("Followup/reminder pass failed")
         await asyncio.sleep(CHECK_INTERVAL)
