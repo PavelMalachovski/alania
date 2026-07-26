@@ -44,5 +44,6 @@ async def cmd_id(message: Message) -> None:
 
 
 @router.callback_query(F.data == "start_menu")
-async def cb_start_menu(callback: CallbackQuery) -> None:
+async def cb_start_menu(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
     await callback.message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
