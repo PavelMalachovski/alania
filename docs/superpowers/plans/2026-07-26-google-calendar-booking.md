@@ -1652,18 +1652,12 @@ async def reminder_pass(bot: Bot, now: datetime | None = None) -> int:
         bookings = (await session.execute(
             select(Booking).where(Booking.status == "confirmed")
         )).scalars().all()
-        sent_ids = {
-            e.telegram_id for e in (await session.execute(
-                select(Event).where(Event.action == "reminder_sent")
-            )).scalars()
-        }
     sent = 0
     for b in bookings:
         slot = _as_utc(b.slot_start)
         if not (now < slot <= horizon):
             continue
-        marker = f"reminder_sent"
-        # маркер по пользователю+слоту, чтобы не слать дважды
+        # не слать повторно: уже есть отметка reminder_sent по этому пользователю
         async with get_session() as session:
             already = (await session.execute(
                 select(Event).where(
@@ -1678,7 +1672,7 @@ async def reminder_pass(bot: Bot, now: datetime | None = None) -> int:
             await bot.send_message(
                 b.telegram_id,
                 "○─── ☾ ───○\n\n"
-                f"Напоминаю: завтра у тебя консультация 🤍\n"
+                "Напоминаю: завтра у тебя консультация 🤍\n"
                 f"<b>{format_slot_human(slot)}</b>\n\n"
                 "Лана пришлёт ссылку на видеозвонок перед началом. До встречи ✦",
             )
