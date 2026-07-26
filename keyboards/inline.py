@@ -11,12 +11,11 @@ GUIDE_URL = "https://t.me/c/2260920571/433"
 
 def main_menu_kb():
     builder = InlineKeyboardBuilder()
-    builder.button(text="Узнать больше о личной работе", callback_data="personal_work")
-    builder.button(text="Узнать больше про игру VECHNOST", callback_data="game")
-    builder.button(text="Войти в бесплатный Telegram-канал", callback_data="channel")
-    builder.button(text="Получить гайд «карта твоего запроса»", callback_data="gift")
+    builder.button(text="О личной работе", callback_data="personal_work")
+    builder.button(text="Про игру VECHNOST", callback_data="game")
+    builder.button(text="Войти в бесплатный Telegram-канал", url=CHANNEL_URL)
     builder.button(
-        text="✦ Пройти тест «Кто управляет твоей жизнью?»",
+        text="✦ Тест «Кто управляет твоей жизнью?»",
         callback_data="quiz_intro",
     )
     builder.adjust(1)
