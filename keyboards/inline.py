@@ -22,7 +22,6 @@ def main_menu_kb():
 def personal_work_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Личная консультация «Точка сборки»", callback_data="consultation")
-    builder.button(text="Менторство (4 недели)", callback_data="mentoring")
     builder.button(text="⇦ Назад", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
@@ -103,15 +102,6 @@ def consultation_how_kb():
     builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ Назад", callback_data="consultation")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def mentoring_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Оставить заявку", callback_data="lead_start:mentoring")
-    builder.button(text="Узнать больше в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data="personal_work")
     builder.adjust(1)
     return builder.as_markup()
 

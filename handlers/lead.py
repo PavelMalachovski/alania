@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 PRODUCTS = {
     "consultation": "Консультация «Точка сборки»",
-    "mentoring": "Менторство (4 недели)",
 }
 
 
