@@ -1,6 +1,7 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
+from formatting import PRICE_TEXT
 from keyboards.inline import (
     consultation_kb,
     consultation_how_kb,
@@ -29,7 +30,7 @@ CONSULTATION_TEXT = (
     "психология, коучинг, духовность.\n\n"
     "● Длительность: 70 минут\n"
     "● Формат: онлайн (видеозвонок)\n"
-    "● Стоимость: 100 € / 10000 ₽\n\n"
+    f"● Стоимость: {PRICE_TEXT}\n\n"
     "Во время встречи мы можем разобрать один или несколько запросов. "
     "Ты получишь конкретные рекомендации, практики и методы, которые дадут "
     "новый результат в жизни."

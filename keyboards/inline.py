@@ -221,6 +221,7 @@ def quiz_question_kb(options: "list[tuple[str, int]]", is_first: bool):
 
 def quiz_result_kb():
     builder = InlineKeyboardBuilder()
+    builder.button(text="✦ Записаться на консультацию", callback_data="booking_start")
     builder.button(text="Написать в ЛС", url=DM_URL)
     builder.button(text="Пройти заново", callback_data="quiz_begin")
     builder.button(text="⇦ В меню", callback_data="start_menu")
