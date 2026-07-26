@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 FOLLOWUP_DELAY = timedelta(hours=1)
 FOLLOWUP_WINDOW = timedelta(hours=48)  # старые клики не трогаем (например, после редеплоя)
 CHECK_INTERVAL = 600  # секунд между проверками
-REMINDER_WINDOW_START = timedelta(hours=0)
 REMINDER_LEAD = timedelta(hours=24)
 
 FOLLOWUP_TEXT = (
