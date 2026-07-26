@@ -15,6 +15,10 @@ def main_menu_kb():
     builder.button(text="Узнать больше про игру VECHNOST", callback_data="game")
     builder.button(text="Войти в бесплатный Telegram-канал", callback_data="channel")
     builder.button(text="Получить гайд «карта твоего запроса»", callback_data="gift")
+    builder.button(
+        text="✦ Пройти тест «Кто управляет твоей жизнью?»",
+        callback_data="quiz_intro",
+    )
     builder.adjust(1)
     return builder.as_markup()
 
