@@ -233,3 +233,12 @@ async def test_calendar_sync_failure_still_records_payment(env):
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "pay_claimed"
     assert b.calendar_sync_failed is True
+
+
+@pytest.mark.asyncio
+async def test_quiz_answer_without_state_gives_hint(env):
+    dp, bot, gcal, session = env
+    # без quiz_begin — состояния Quiz.in_progress нет
+    await press(dp, bot, "quiz_ans:3")
+    texts = [d.get("text", "") for n, d in session.log if d.get("chat_id") == CLIENT_ID]
+    assert any("заново" in t.lower() or "сброш" in t.lower() for t in texts)
