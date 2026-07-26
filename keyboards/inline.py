@@ -181,3 +181,33 @@ def reviews_kb(page: int, total: int):
     builder.button(text="⇦ Назад", callback_data="consultation")
     builder.adjust(2, 1, 1)
     return builder.as_markup()
+
+
+# ── Тест «Кто управляет твоей жизнью?» ───────────────────────────────
+def quiz_intro_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Начать тест", callback_data="quiz_begin")
+    builder.button(text="⇦ В меню", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def quiz_question_kb(options: "list[tuple[str, int]]", is_first: bool):
+    """options — список (текст варианта, балл) в порядке показа."""
+    builder = InlineKeyboardBuilder()
+    for text, score in options:
+        builder.button(text=text, callback_data=f"quiz_ans:{score}")
+    if not is_first:
+        builder.button(text="⇦ Назад", callback_data="quiz_back")
+    builder.button(text="✕ Прервать", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def quiz_result_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.button(text="Пройти заново", callback_data="quiz_begin")
+    builder.button(text="⇦ В меню", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
