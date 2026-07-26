@@ -156,3 +156,80 @@ async def test_pick_time_creates_hold(env):
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "held"
     assert b.held_until is not None
+
+
+async def _book_one(dp, bot, session):
+    await press(dp, bot, "booking_start")
+    await press(dp, bot, find_cb(session, "book_day:"))
+    await press(dp, bot, find_cb(session, "book_slot:"))
+    return find_cb(session, "paid:")
+
+
+@pytest.mark.asyncio
+async def test_paid_creates_event_and_notifies_admin(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "pay_claimed"
+    assert b.google_event_id in gcal.events
+    # админу ушло уведомление с кнопками подтвердить/отклонить
+    admin_kb = last_kb(session, chat_id=ADMIN_ID)
+    flat = [x.get("callback_data", "") for row in admin_kb for x in row]
+    assert any(c.startswith("confirm_pay:") for c in flat)
+    assert any(c.startswith("reject_pay:") for c in flat)
+
+
+@pytest.mark.asyncio
+async def test_double_paid_creates_single_event(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    await press(dp, bot, paid)  # второй клик
+    assert len(gcal.events) == 1
+
+
+@pytest.mark.asyncio
+async def test_reject_pay_deletes_event_and_frees_slot(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
+    assert len(gcal.deleted) == 1
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_confirm_pay_notifies_client(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "confirmed"
+
+
+@pytest.mark.asyncio
+async def test_calendar_sync_failure_still_records_payment(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    async def boom(*a, **k):
+        raise RuntimeError("insert failed")
+    gcal.create_event = boom
+    await press(dp, bot, paid)
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "pay_claimed"
+    assert b.calendar_sync_failed is True

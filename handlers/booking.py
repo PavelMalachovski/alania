@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from booking_config import BookingConfig
 from database import Booking, get_session
-from formatting import PRICE_TEXT, format_slot_human, TZ_PRAGUE
+from formatting import PRICE_TEXT, format_slot_human
 from google_calendar import GoogleCalendar
 from keyboards.inline import (
     admin_confirm_pay_kb,
@@ -22,17 +22,6 @@ from slots import free_slots
 router = Router()
 logger = logging.getLogger(__name__)
 _WEEKDAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-
-
-def day_label(d: date) -> str:
-    """Совместимость: handlers/admin.py::cb_confirm_pay ещё импортирует эту
-    функцию и читает Booking.slot_date/slot_time (схема этих полей убрана
-    в Task 1). Task 6 не трогает admin.py — по плану cb_confirm_pay
-    переписывается в Task 7 (переезд на format_slot_human + slot_start,
-    добавление reject_pay/create_event). До этого момента символ нужен
-    только для того, чтобы `from handlers import setup_routers` не падал
-    с ImportError; новым хендлерам этого файла он не нужен."""
-    return f"{_WEEKDAYS_RU[d.weekday()]} {d.strftime('%d.%m')}"
 
 
 async def _active_holds(session, now: datetime) -> list[datetime]:
@@ -188,4 +177,95 @@ async def cb_book_slot(
         "Оплати удобным способом и нажми «✓ Я оплатил(а)» ⇩\n"
         "Лана подтвердит запись, и тебе придёт сообщение.",
         reply_markup=booking_pay_kb(booking_id),
+    )
+
+
+def _client_line(callback: CallbackQuery) -> str:
+    user = callback.from_user
+    username = f"@{user.username}" if user.username else "нет username"
+    return (
+        f"<b>Клиент:</b> {html.quote(user.full_name)} — {username} "
+        f'(<a href="tg://user?id={user.id}">открыть</a>, id {user.id})'
+    )
+
+
+def _event_description(callback: CallbackQuery) -> str:
+    user = callback.from_user
+    username = f"@{user.username}" if user.username else f"id {user.id}"
+    return f"Клиент: {user.full_name} ({username})"
+
+
+async def _notify_admins(bot: Bot, admin_ids, text: str, reply_markup=None) -> None:
+    delivered = False
+    for admin_id in admin_ids:
+        try:
+            await bot.send_message(admin_id, text, reply_markup=reply_markup)
+            delivered = True
+        except TelegramAPIError:
+            logger.warning("Не доставлено админу %s", admin_id)
+    if not delivered:
+        logger.error("Уведомление не доставлено НИ ОДНОМУ админу: %s", text[:80])
+
+
+@router.callback_query(F.data.startswith("paid:"))
+async def cb_paid(
+    callback: CallbackQuery, bot: Bot, admin_ids: list[int], gcal: GoogleCalendar
+) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        await callback.answer("Не понял запись", show_alert=True)
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.telegram_id != callback.from_user.id:
+            await callback.answer("Запись не найдена", show_alert=True)
+            return
+        if booking.status != "held":
+            await callback.answer("Уже принято 🤍 Ждём подтверждения Ланы", show_alert=True)
+            return
+        slot = booking.slot_start
+        if slot.tzinfo is None:
+            slot = slot.replace(tzinfo=timezone.utc)
+
+    # создаём событие в календаре
+    event_id = None
+    sync_failed = False
+    try:
+        event_id = await gcal.create_event(
+            slot, callback.from_user.full_name, _event_description(callback)
+        )
+    except Exception:
+        logger.exception("Не удалось создать событие в календаре для booking %s", booking_id)
+        sync_failed = True
+
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if booking.status != "held":  # гонка двойного клика
+            if event_id:
+                try:
+                    await gcal.delete_event(event_id)
+                except Exception:
+                    logger.exception("Откат дубля события не удался")
+            await callback.answer("Уже принято 🤍", show_alert=True)
+            return
+        booking.status = "pay_claimed"
+        booking.google_event_id = event_id
+        booking.calendar_sync_failed = sync_failed
+        await session.commit()
+
+    await callback.message.edit_text(
+        "○─── ☾ ───○\n\n"
+        "🤍 Принято! Проверяем оплату.\n\n"
+        f"Как только Лана подтвердит, придёт сообщение о записи на "
+        f"<b>{format_slot_human(slot)}</b>."
+    )
+    warn = "\n\n⚠️ Событие в календаре не создалось — оформи вручную." if sync_failed else ""
+    await _notify_admins(
+        bot, admin_ids,
+        "💳 <b>Клиент сообщил об оплате слота</b>\n\n"
+        f"<b>Слот:</b> {format_slot_human(slot)}\n"
+        f"{_client_line(callback)}\n\n"
+        f"Проверь оплату в Tribute и подтверди ⇩{warn}",
+        reply_markup=admin_confirm_pay_kb(booking_id),
     )

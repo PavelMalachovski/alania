@@ -87,6 +87,7 @@ def booking_pay_kb(booking_id: int):
 def admin_confirm_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Подтвердить оплату", callback_data=f"confirm_pay:{booking_id}")
+    builder.button(text="❌ Оплата не найдена", callback_data=f"reject_pay:{booking_id}")
     builder.adjust(1)
     return builder.as_markup()
 
