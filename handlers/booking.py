@@ -37,7 +37,7 @@ async def _user_has_active(session, tg_id: int, now: datetime) -> bool:
     row = (await session.execute(
         select(Booking.id).where(
             Booking.telegram_id == tg_id,
-            Booking.status.in_(["confirmed", "pay_claimed"])
+            (Booking.status.in_(["confirmed", "pay_claimed"]) & (Booking.slot_start > now))
             | ((Booking.status == "held") & (Booking.held_until > now)),
         ).limit(1)
     )).first()
@@ -75,7 +75,7 @@ async def cb_booking_start(
     if not slots:
         await callback.message.edit_text(
             "○─── ☾ ───○\n\n"
-            "Ближайшие две недели заняты 🤍 Напиши Лане в ЛС — "
+            "Ближайшее время сейчас занято 🤍 Напиши Лане в ЛС — "
             "подберём время индивидуально.",
             reply_markup=booking_error_kb(),
         )

@@ -29,3 +29,25 @@ async def test_reminder_sent_once_for_tomorrow_session():
     await close_db()
     database.engine = None
     database.async_session = None
+
+
+@pytest.mark.asyncio
+async def test_reminder_marker_is_per_booking_not_per_user():
+    # у одного клиента две будущие подтверждённые записи в окне напоминания —
+    # маркер reminder_sent должен быть привязан к брони, а не к пользователю,
+    # иначе второе напоминание подавится первым (см. Booking с исправлением
+    # разрешающим повторную запись клиенту)
+    await init_db("sqlite+aiosqlite:///:memory:")
+    now = datetime(2026, 7, 27, 12, tzinfo=timezone.utc)
+    async with get_session() as s:
+        s.add(Booking(telegram_id=1, slot_start=now + timedelta(hours=20), status="confirmed"))
+        s.add(Booking(telegram_id=1, slot_start=now + timedelta(hours=22), status="confirmed"))
+        await s.commit()
+    bot = FakeBot()
+    n1 = await reminder_pass(bot, now)
+    n2 = await reminder_pass(bot, now)  # повторно не шлём по тем же двум броням
+    assert n1 == 2
+    assert n2 == 0
+    await close_db()
+    database.engine = None
+    database.async_session = None

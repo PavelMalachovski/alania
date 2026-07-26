@@ -90,6 +90,11 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
         if booking.status == "confirmed":
             await callback.answer("Уже подтверждено")
             return
+        if booking.status != "pay_claimed":
+            await callback.answer(
+                f"Эта запись уже обработана ({booking.status})", show_alert=True
+            )
+            return
         booking.status = "confirmed"
         await session.commit()
         user_id, slot = booking.telegram_id, booking.slot_start
@@ -127,6 +132,11 @@ async def cb_reject_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
             return
         if booking.status == "cancelled":
             await callback.answer("Уже отменено")
+            return
+        if booking.status == "confirmed":
+            await callback.answer(
+                "Запись уже подтверждена, отклонить нельзя", show_alert=True
+            )
             return
         event_id = booking.google_event_id
         booking.status = "cancelled"

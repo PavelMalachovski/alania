@@ -24,7 +24,11 @@ class GoogleCalendar:
         from googleapiclient.discovery import build
 
         raw = os.environ["GOOGLE_SA_CREDENTIALS"]
-        info = json.loads(raw) if raw.strip().startswith("{") else json.load(open(raw))
+        if raw.strip().startswith("{"):
+            info = json.loads(raw)
+        else:
+            with open(raw) as f:
+                info = json.load(f)
         creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
         service = build("calendar", "v3", credentials=creds, cache_discovery=False)
         return cls(

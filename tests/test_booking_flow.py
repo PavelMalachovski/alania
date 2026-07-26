@@ -236,6 +236,52 @@ async def test_calendar_sync_failure_still_records_payment(env):
 
 
 @pytest.mark.asyncio
+async def test_past_confirmed_booking_does_not_block_new_booking(env):
+    dp, bot, gcal, session = env
+    from sqlalchemy import select
+    async with get_session() as s:
+        s.add(Booking(
+            telegram_id=CLIENT_ID,
+            slot_start=datetime.now(timezone.utc) - timedelta(days=10),
+            status="confirmed",
+        ))
+        await s.commit()
+    # клиент с ПРОШЕДШЕЙ подтверждённой записью должен свободно дойти до
+    # выбора дня/времени и создать новый held, а не упереться в алерт
+    # «уже есть активная запись»
+    paid = await _book_one(dp, bot, session)
+    assert paid is not None
+    async with get_session() as s:
+        bookings = (await s.execute(select(Booking))).scalars().all()
+    held = [b for b in bookings if b.status == "held"]
+    assert len(held) == 1
+
+
+@pytest.mark.asyncio
+async def test_reject_after_confirm_is_noop(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    deleted_before = len(gcal.deleted)
+
+    # второй админ (или то же открытое сообщение) жмёт «Отклонить» на уже
+    # подтверждённой записи — должно быть no-op
+    await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
+
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "confirmed"
+    assert len(gcal.deleted) == deleted_before  # событие не удалено повторно
+    client_texts = [d.get("text", "") for n, d in session.log if d.get("chat_id") == CLIENT_ID]
+    assert not any("не нашли" in t for t in client_texts)  # клиенту не сказали "отменено"
+
+
+@pytest.mark.asyncio
 async def test_quiz_answer_without_state_gives_hint(env):
     dp, bot, gcal, session = env
     # без quiz_begin — состояния Quiz.in_progress нет
