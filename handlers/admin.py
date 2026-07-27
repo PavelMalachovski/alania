@@ -133,9 +133,9 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar
         await callback.message.answer(
             "⚠️ Оплата подтверждена, но сообщение клиенту не доставлено."
         )
-    warn = "\n⚠️ Событие не создалось — оформи вручную." if sync_failed else ""
+    warn = " ⚠️ событие оформи вручную" if sync_failed else ""
     await callback.message.edit_text(
-        callback.message.html_text + f"\n\n✅ <b>Оплата подтверждена</b>{warn}"
+        f"✅ {format_slot_human(slot)} — оплата подтверждена{warn}"
     )
 
 
@@ -180,7 +180,7 @@ async def cb_reject_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
     except TelegramAPIError:
         pass
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n❌ <b>Оплата отклонена, слот освобождён</b>"
+        f"❌ {format_slot_human(slot)} — оплата отклонена, слот освобождён"
     )
 
 
@@ -221,7 +221,8 @@ async def cb_resched_ok(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar,
             user_id = booking.telegram_id
             await callback.answer("Новый слот уже занят — перенос отменён", show_alert=True)
             await callback.message.edit_text(
-                callback.message.html_text + "\n\n⚠️ <b>Новый слот занят, перенос не выполнен</b>")
+                "⚠️ Новый слот заняли — перенос не выполнен, запись на прежнем слоте"
+            )
             try:
                 await bot.send_message(
                     user_id,
@@ -245,7 +246,8 @@ async def cb_resched_ok(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar,
     except TelegramAPIError:
         pass
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n✅ <b>Перенос подтверждён</b>")
+        f"✅ Перенос подтверждён: {format_slot_human(moved)}"
+    )
 
 
 @router.callback_query(F.data.startswith("resched_no:"))
@@ -281,7 +283,8 @@ async def cb_resched_no(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
     except TelegramAPIError:
         pass
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n❌ <b>Перенос отклонён, запись отменена</b>")
+        "❌ Перенос отклонён, запись отменена"
+    )
 
 
 @router.message(Command("bookings"))

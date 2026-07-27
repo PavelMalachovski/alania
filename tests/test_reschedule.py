@@ -76,6 +76,122 @@ async def test_reschedule_near_requires_reason_and_pends(env):
 
 
 @pytest.mark.asyncio
+async def test_reschedule_reason_edits_anchor_and_deletes_user_text(env):
+    dp, bot, gcal, session = env
+    # бронь через 2 часа (<24ч), заводим перенос
+    slot = datetime.now(timezone.utc) + timedelta(hours=2)
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    from slots import free_slots
+    import booking_config
+    cfg = booking_config.load()
+    free = free_slots(datetime.now(timezone.utc), [], [], work_times=cfg.work_times,
+                      work_weekdays=cfg.work_weekdays, horizon_days=cfg.horizon_days,
+                      lead=cfg.lead, tz=cfg.tz)
+    new_slot = next(s for s in free if s - datetime.now(timezone.utc) >= timedelta(days=1))
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=eid)
+        s.add(b); await s.commit(); bid = b.id
+    # входим в поток: resched → day → slot (доводим до запроса причины)
+    await press(dp, bot, f"resched:{bid}")
+    await press(dp, bot, find_cb(session, "resched_day:"))
+    await press(dp, bot, find_cb(session, "resched_slot:"))
+    # шлём причину текстом
+    from aiogram.types import Update, Message, Chat, User as TgUser
+    before_sends = sum(1 for n, d in session.log
+                       if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
+    upd = Update(update_id=99, message=Message(
+        message_id=4242, date=datetime.now(),
+        chat=Chat(id=CLIENT_ID, type="private"),
+        from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
+        text="заболел ребёнок"))
+    await dp.feed_update(bot, upd)
+    after_sends = sum(1 for n, d in session.log
+                      if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
+    # клиенту НЕ ушло новое сообщение (отредактирован якорь)
+    assert after_sends == before_sends
+    # текст клиента удалён
+    assert any(n == "DeleteMessage" and d.get("message_id") == 4242
+               for n, d in session.log)
+    # запрос всё равно создан
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status == "pending"
+
+
+@pytest.mark.asyncio
+async def test_reply_button_during_reason_is_treated_as_reason(env):
+    """Тап по кнопке нижней клавиатуры во время ввода причины переноса не
+    перехватывается reply-хендлером (он StateFilter(None)) — падает в
+    resched_reason и трактуется как текст причины."""
+    dp, bot, gcal, session = env
+    # заводим бронь <24ч и доводим до ввода причины
+    slot = datetime.now(timezone.utc) + timedelta(hours=2)
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    from slots import free_slots
+    import booking_config
+    cfg = booking_config.load()
+    free = free_slots(datetime.now(timezone.utc), [], [], work_times=cfg.work_times,
+                      work_weekdays=cfg.work_weekdays, horizon_days=cfg.horizon_days,
+                      lead=cfg.lead, tz=cfg.tz)
+    new_slot = next(s for s in free if s - datetime.now(timezone.utc) >= timedelta(days=1))
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=eid)
+        s.add(b); await s.commit(); bid = b.id
+    await press(dp, bot, f"resched:{bid}")
+    await press(dp, bot, find_cb(session, "resched_day:"))
+    await press(dp, bot, find_cb(session, "resched_slot:"))
+    # клиент, будучи в состоянии ввода причины, тапает reply-кнопку «📅 Записаться»
+    from aiogram.types import Update, Message, Chat, User as TgUser
+    upd = Update(update_id=98, message=Message(
+        message_id=4343, date=datetime.now(),
+        chat=Chat(id=CLIENT_ID, type="private"),
+        from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
+        text="📅 Записаться"))
+    await dp.feed_update(bot, upd)
+    # текст кнопки стал причиной → создан pending с этой причиной
+    # (reply-хендлер НЕ перехватил, иначе reschedule_status остался бы None)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status == "pending"
+    assert b.reschedule_reason == "📅 Записаться"
+
+
+@pytest.mark.asyncio
+async def test_reply_book_filter_chain_blocks_when_state_active():
+    """В полном диспетчере resched_reason (в booking_router, включённом
+    РАНЬШЕ reply_router) матчится первым для любого текста в состоянии
+    RescheduleForm.reason — поэтому предыдущий тест прошёл бы, даже если бы
+    у reply_book пропал StateFilter(None): reply_router просто не успевает
+    получить событие из-за порядка роутеров. Чтобы проверить именно
+    заявленный в CLAUDE.md механизм («сам хендлер reply_book безопасен за
+    счёт StateFilter(None)»), дёргаем реальную цепочку фильтров хендлера
+    напрямую (handler.check(...)), не поднимая второй Dispatcher — router
+    handlers.reply.router уже включён в сессионный _dp, повторный
+    include_router() в новый Dispatcher упал бы RuntimeError."""
+    from handlers.reply import router as reply_router, reply_book
+    from keyboards.reply import BTN_BOOK
+    from aiogram.types import Message, Chat, User as TgUser
+
+    handler_obj = next(h for h in reply_router.message.handlers
+                        if h.callback is reply_book)
+    msg = Message(message_id=1, date=datetime.now(),
+                  chat=Chat(id=CLIENT_ID, type="private"),
+                  from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
+                  text=BTN_BOOK)
+
+    # активное FSM-состояние (как во время ввода причины переноса) — фильтр
+    # хендлера НЕ должен пройти
+    ok_active, _ = await handler_obj.check(msg, raw_state="RescheduleForm:reason")
+    assert ok_active is False
+
+    # состояния нет — фильтр обязан пройти, иначе кнопка не работала бы вовсе
+    ok_none, _ = await handler_obj.check(msg, raw_state=None)
+    assert ok_none is True
+
+
+@pytest.mark.asyncio
 async def test_apply_reschedule_no_event_just_moves_slot(env):
     # pay_claimed без google_event_id: apply_reschedule не должна трогать
     # календарь, только двигает slot_start и возвращает True (sync_ok)
@@ -226,6 +342,20 @@ async def test_resched_ok_google_down_leaves_pending(env):
     assert b.slot_start.replace(tzinfo=timezone.utc) != new_slot  # не переехало
     assert b.google_event_id == old_eid                 # событие не пересоздано
     assert old_eid not in gcal.deleted
+
+
+@pytest.mark.asyncio
+async def test_resched_reject_collapses_admin_notification(env):
+    dp, bot, gcal, session = env
+    bid, old_eid, _ = await _pending_near(env)
+    from aiogram.types import User as TgUser
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_no:{bid}", user=admin, chat_id=ADMIN_ID)
+    edits = [d for n, d in session.log
+             if n == "EditMessageText" and d.get("chat_id") == ADMIN_ID]
+    assert edits[-1]["text"].startswith("❌")   # старый код начинался бы с "x"
+    assert "отклонён" in edits[-1]["text"].lower()
+    assert "Причина:" not in edits[-1]["text"]
 
 
 @pytest.mark.asyncio

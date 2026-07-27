@@ -62,24 +62,66 @@ python main.py
   минус активные холды в БД. Без побочных эффектов, легко тестируется.
 - `formatting.py` — `format_slot_human()` (слот в Праге + Мск, день недели),
   `PRICE_TEXT` (цена консультации).
-- `handlers/` — по одному роутеру на файл, собираются в `setup_routers()`:
+- `ui.py` — два хелпера для гигиены сообщений, на них держится вся уборка
+  переписки в handlers/: `delete_safe(bot, chat_id, message_id)` — удалить
+  сообщение, глотая `TelegramAPIError` (старше 48ч, уже удалено, нет прав);
+  `edit_screen(bot, chat_id, message_id, text, reply_markup=None)` —
+  отредактировать «экран» тем же способом, глотая «not modified» /
+  «message to edit not found». Оба — no-op при ошибке, вызывающему коду не
+  нужно оборачивать их в try/except.
+- `handlers/` — по одному роутеру на файл, собираются в `setup_routers()`;
+  `reply_router` зарегистрирован **перед** `fallback_router`, но порядок
+  между ними функционально не важен: `fallback.py` ловит только
+  колбэки (`quiz_ans:*`, `quiz_back`), без единого message-хендлера, так что
+  перехватить текст кнопок нижней клавиатуры он в принципе не может. Тексты
+  кнопок безопасны сами по себе — за счёт `StateFilter(None)` + точного
+  `F.text == "..."` в `reply.py` (см. ниже):
   - `admin.py` — `/set_guide`, `/broadcast`, `/admin`, `/cancel`, `/bookings`
     (список ближайших `pay_claimed`/`confirmed` записей), подтверждение
     (`confirm_pay:<id>`, здесь же создаётся событие в календаре) и
     отклонение (`reject_pay:<id>`) оплаты, подтверждение (`resched_ok:<id>`)
-    и отклонение (`resched_no:<id>`) переноса записи. Роутер целиком под
-    `IsAdmin`.
+    и отклонение (`resched_no:<id>`) переноса записи. После каждого действия
+    карточка-уведомление у Ланы схлопывается в короткую итоговую строку
+    (`callback.message.edit_text("✅ … — оплата подтверждена")` и т.п.) —
+    вместо того чтобы оставлять развёрнутое уведомление висеть в чате.
+    Роутер целиком под `IsAdmin`.
   - `booking.py` — выбор дня/времени из реальных Google-слотов, холд слота в
     `bookings` на `BOOKING_HOLD_MINUTES`, экран оплаты, «Я оплатил(а)»,
     лимит активных записей (`MAX_ACTIVE_BOOKINGS`), «Мои записи»
     (`my_bookings`) и перенос (`resched:<id>` → выбор нового слота →
-    сразу или через согласие Ланы, `RESCHEDULE_THRESHOLD`).
+    сразу или через согласие Ланы, `RESCHEDULE_THRESHOLD`). Экраны записи
+    вынесены в переиспользуемые функции `open_calendar(message, gcal, cfg,
+    *, send)` и `open_my_bookings(message, tg_id, *, send)` — `send=True`
+    шлёт новым сообщением (зовёт `handlers/reply.py` из нижней клавиатуры),
+    `send=False` редактирует переданное `message` (зовут inline-колбэки).
+    Перенос <24ч использует паттерн «якорь»: id сообщения с вопросом о
+    причине сохраняется в FSM (`resched_screen_id`), а хендлер
+    `RescheduleForm.reason` при ответе клиента удаляет его текст
+    (`delete_safe`) и редактирует тот же якорь (`edit_screen`) — один экран
+    вместо цепочки сообщений «спроси → ответь → спасибо».
   - `fallback.py` — ловит колбэки старого квиза (`quiz_ans:*`, `quiz_back`),
     оставшиеся в сообщениях после рестарта бота и сброса FSM меню.
   - `lead.py` — FSM-заявка (имя → запрос → контакт), уведомление админам.
-  - `start.py` — `/start`, `/id`, возврат в главное меню.
+  - `start.py` — `/start`, `/id`, возврат в главное меню. `/start` шлёт
+    приветственный текст с `reply_markup=main_reply_kb()` (нижняя
+    клавиатура), пришпиливает пользователя в БД; богатое inline-меню
+    (`main_menu_kb()`) само по себе на `/start` не шлётся — оно открывается
+    функцией `open_main_menu(message, *, send)` по кнопке «🏠 Меню» или
+    колбэку `start_menu`.
+  - `reply.py` — хендлеры нижней клавиатуры (`keyboards/reply.py`):
+    «📅 Записаться» → `open_calendar(..., send=True)`, «📋 Мои записи» →
+    `open_my_bookings(..., send=True)`, «🏠 Меню» → `open_main_menu(...,
+    send=True)`, «💬 Вопрос Лане» → текст со ссылкой (`ask_lana_kb()`).
+    Каждый хендлер сперва удаляет сообщение с текстом кнопки
+    (`delete_safe`), затем шлёт экран. Все фильтруются `StateFilter(None)`
+    (`F.text == BTN_*`) — не перехватывают текст, пока пользователь в
+    какой-то FSM-форме (например, вводит причину переноса).
   - `consultation.py`, `info.py` — контентные экраны (тексты + клавиатуры).
 - `keyboards/inline.py` — все inline-клавиатуры и внешние URL (одним блоком сверху).
+- `keyboards/reply.py` — `main_reply_kb()`: постоянная `ReplyKeyboardMarkup`
+  (`resize_keyboard=True`, `is_persistent=True`) на 4 кнопки — константы
+  `BTN_BOOK` (📅 Записаться), `BTN_MY` (📋 Мои записи), `BTN_MENU` (🏠 Меню),
+  `BTN_ASK` (💬 Вопрос Лане).
 
 ## Флоу записи на слот (booking)
 
@@ -115,8 +157,12 @@ python main.py
 ещё ≥ `RESCHEDULE_THRESHOLD` (`timedelta(hours=24)`) — перенос применяется
 сразу через `apply_reschedule()` (для записи с уже созданным событием —
 `delete_event()` старого + `create_event()` нового, `slot_start` меняется).
-Если осталось < 24ч — бот просит причину (FSM `RescheduleForm.reason`) и
-ставит `Booking.reschedule_to/reschedule_reason/reschedule_status="pending"`,
+Если осталось < 24ч — бот просит причину (FSM `RescheduleForm.reason`), при
+этом вопрос о причине остаётся единственным сообщением-«якорем» (id
+сохранён в `resched_screen_id`): ответ клиента удаляется (`delete_safe`), а
+сам якорь редактируется (`edit_screen`) вместо того, чтобы плодить новую
+переписку. Дальше бот ставит
+`Booking.reschedule_to/reschedule_reason/reschedule_status="pending"`,
 админам приходят кнопки «✅ Подтвердить перенос» (`resched_ok:<id>`) /
 «❌ Отклонить перенос» (`resched_no:<id>`). Approve — перепроверяет, что
 `reschedule_to` всё ещё в `free_slots()`; если свободен — двигает через
@@ -183,7 +229,7 @@ Tribute не шлёт вебхуков — оплата подтверждает
 ## Проверка изменений
 
 ```bash
-python -m py_compile main.py database.py middlewares.py filters.py followup.py slots.py google_calendar.py booking_config.py formatting.py handlers/*.py keyboards/inline.py
+python -m py_compile main.py database.py middlewares.py filters.py followup.py slots.py google_calendar.py booking_config.py formatting.py ui.py handlers/*.py keyboards/*.py
 ```
 
 Автотесты есть (`tests/`, pytest) — гоняют хендлеры через фейковую сессию

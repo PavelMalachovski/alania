@@ -458,6 +458,23 @@ async def test_sixth_active_booking_blocked(env):
 
 
 @pytest.mark.asyncio
+async def test_confirm_collapses_admin_notification(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    # последний EditMessageText в чат Ланы — короткая итоговая строка
+    edits = [d for n, d in session.log
+             if n == "EditMessageText" and d.get("chat_id") == ADMIN_ID]
+    last = edits[-1]["text"]
+    assert last.startswith("✅")          # старый код начинался бы с "x"
+    assert "подтвержд" in last.lower()
+    assert "Проверь оплату в Tribute" not in last   # полный исходный текст ушёл
+
+
+@pytest.mark.asyncio
 async def test_my_bookings_lists_future_paid(env):
     dp, bot, gcal, session = env
     from datetime import datetime, timedelta, timezone

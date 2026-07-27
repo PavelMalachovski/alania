@@ -26,6 +26,14 @@ def main_menu_kb():
     return builder.as_markup()
 
 
+def ask_lana_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.button(text="⇦ В меню", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def personal_work_kb():
     """Экран «О личной работе» (бывшая консультация без прослойки «Точка сборки»)."""
     builder = InlineKeyboardBuilder()

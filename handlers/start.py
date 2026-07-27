@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
 from keyboards.inline import main_menu_kb
+from keyboards.reply import main_reply_kb
 
 router = Router()
 
@@ -16,6 +17,13 @@ MAIN_MENU_TEXT = (
     "которые помогут тебе на этом пути.\n\n"
     "С чего начнём? Выбирай нужный раздел ниже ⇩"
 )
+
+
+async def open_main_menu(message, *, send: bool) -> None:
+    if send:
+        await message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
+    else:
+        await message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
 
 
 @router.message(CommandStart())
@@ -35,7 +43,10 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             user.full_name = message.from_user.full_name
         await session.commit()
 
-    await message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
+    await message.answer(
+        MAIN_MENU_TEXT + "\n\nБыстрые действия — на клавиатуре ниже 👇",
+        reply_markup=main_reply_kb(),
+    )
 
 
 @router.message(Command("id"))
@@ -46,4 +57,4 @@ async def cmd_id(message: Message) -> None:
 @router.callback_query(F.data == "start_menu")
 async def cb_start_menu(callback: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
-    await callback.message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
+    await open_main_menu(callback.message, send=False)
