@@ -166,7 +166,11 @@ async def _book_one(dp, bot, session):
 
 
 @pytest.mark.asyncio
-async def test_paid_creates_event_and_notifies_admin(env):
+async def test_paid_notifies_admin_without_creating_event(env):
+    # переименовано из test_paid_creates_event_and_notifies_admin: событие
+    # теперь создаётся на confirm (см. test_event_created_on_confirm_not_on_paid),
+    # а не на paid — здесь фиксируем, что paid только переводит статус и шлёт
+    # админу кнопки, календаря не касаясь.
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
@@ -174,7 +178,8 @@ async def test_paid_creates_event_and_notifies_admin(env):
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "pay_claimed"
-    assert b.google_event_id in gcal.events
+    assert b.google_event_id is None
+    assert gcal.events == {}
     # админу ушло уведомление с кнопками подтвердить/отклонить
     admin_kb = last_kb(session, chat_id=ADMIN_ID)
     flat = [x.get("callback_data", "") for row in admin_kb for x in row]
@@ -183,24 +188,75 @@ async def test_paid_creates_event_and_notifies_admin(env):
 
 
 @pytest.mark.asyncio
-async def test_double_paid_creates_single_event(env):
+async def test_event_created_on_confirm_not_on_paid(env):
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
-    await press(dp, bot, paid)  # второй клик
-    assert len(gcal.events) == 1
+    assert gcal.events == {}          # после «оплатил» события ещё нет
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    assert len(gcal.events) == 1      # событие появилось на подтверждении
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "confirmed" and b.google_event_id in gcal.events
 
 
 @pytest.mark.asyncio
-async def test_reject_pay_deletes_event_and_frees_slot(env):
+async def test_reject_from_pay_claimed_touches_no_calendar(env):
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
     reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
     admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
     await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
-    assert len(gcal.deleted) == 1
+    assert gcal.events == {} and gcal.deleted == []
     from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_double_confirm_creates_single_event(env):
+    # переименовано из test_double_paid_creates_single_event: событие теперь
+    # создаётся в cb_confirm_pay, поэтому double-click-защита от дублирующего
+    # события переехала туда же (двойной paid больше не трогает календарь
+    # вообще — см. test_paid_notifies_admin_without_creating_event).
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)  # второй клик
+    assert len(gcal.events) == 1
+
+
+@pytest.mark.asyncio
+async def test_reject_pay_deletes_event_and_frees_slot(env):
+    # переименовано по смыслу не было, но сценарий адаптирован: в новой схеме
+    # pay_claimed никогда не получает google_event_id естественным путём
+    # (событие появляется только вместе с переходом в confirmed) — реальный
+    # UI-флоу это больше не воспроизводит. Тест проверяет defense-in-depth
+    # ветку `if event_id:` в cb_reject_pay, вручную проставляя event_id на
+    # pay_claimed-записи (как если бы это состояние возникло нештатно) —
+    # чтобы удаление события при отклонении не осталось без покрытия.
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+        b.google_event_id = "evt_manual"
+        await s.commit()
+    gcal.events["evt_manual"] = b.slot_start
+    reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
+    assert gcal.deleted == ["evt_manual"]
+    assert "evt_manual" not in gcal.events
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "cancelled"
@@ -222,17 +278,24 @@ async def test_confirm_pay_notifies_client(env):
 
 @pytest.mark.asyncio
 async def test_calendar_sync_failure_still_records_payment(env):
+    # адаптировано: Google теперь дёргается в cb_confirm_pay, а не в cb_paid —
+    # падение имитируем на confirm; запись всё равно переходит в confirmed
+    # (админ уже проверил оплату), просто с пометкой calendar_sync_failed.
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
     async def boom(*a, **k):
         raise RuntimeError("insert failed")
     gcal.create_event = boom
-    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
     from sqlalchemy import select
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
-    assert b.status == "pay_claimed"
+    assert b.status == "confirmed"
     assert b.calendar_sync_failed is True
+    assert b.google_event_id is None
 
 
 @pytest.mark.asyncio

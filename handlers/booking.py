@@ -254,10 +254,13 @@ def _client_line(callback: CallbackQuery) -> str:
     )
 
 
-def _event_description(callback: CallbackQuery) -> str:
-    user = callback.from_user
-    username = f"@{user.username}" if user.username else f"id {user.id}"
-    return f"Клиент: {user.full_name} ({username})"
+async def build_event_fields(session, tg_id: int) -> tuple[str, str]:
+    """Заголовок и описание события в календаре по данным клиента из User."""
+    from database import User
+    user = await session.get(User, tg_id)
+    name = (user.full_name if user and user.full_name else f"id {tg_id}")
+    handle = f"@{user.username}" if user and user.username else f"id {tg_id}"
+    return f"Консультация — {name}", f"Клиент: {name} ({handle})"
 
 
 async def _notify_admins(bot: Bot, admin_ids, text: str, reply_markup=None) -> None:
@@ -273,9 +276,7 @@ async def _notify_admins(bot: Bot, admin_ids, text: str, reply_markup=None) -> N
 
 
 @router.callback_query(F.data.startswith("paid:"))
-async def cb_paid(
-    callback: CallbackQuery, bot: Bot, admin_ids: list[int], gcal: GoogleCalendar
-) -> None:
+async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> None:
     try:
         booking_id = int(callback.data.split(":", 1)[1])
     except ValueError:
@@ -289,35 +290,11 @@ async def cb_paid(
         if booking.status != "held":
             await callback.answer("Уже принято 🤍 Ждём подтверждения Ланы", show_alert=True)
             return
+        booking.status = "pay_claimed"
+        await session.commit()
         slot = booking.slot_start
         if slot.tzinfo is None:
             slot = slot.replace(tzinfo=timezone.utc)
-
-    # создаём событие в календаре
-    event_id = None
-    sync_failed = False
-    try:
-        event_id = await gcal.create_event(
-            slot, callback.from_user.full_name, _event_description(callback)
-        )
-    except Exception:
-        logger.exception("Не удалось создать событие в календаре для booking %s", booking_id)
-        sync_failed = True
-
-    async with get_session() as session:
-        booking = await session.get(Booking, booking_id)
-        if booking.status != "held":  # гонка двойного клика
-            if event_id:
-                try:
-                    await gcal.delete_event(event_id)
-                except Exception:
-                    logger.exception("Откат дубля события не удался")
-            await callback.answer("Уже принято 🤍", show_alert=True)
-            return
-        booking.status = "pay_claimed"
-        booking.google_event_id = event_id
-        booking.calendar_sync_failed = sync_failed
-        await session.commit()
 
     await callback.message.edit_text(
         "○─── ☾ ───○\n\n"
@@ -325,12 +302,11 @@ async def cb_paid(
         f"Как только Лана подтвердит, придёт сообщение о записи на "
         f"<b>{format_slot_human(slot)}</b>."
     )
-    warn = "\n\n⚠️ Событие в календаре не создалось — оформи вручную." if sync_failed else ""
     await _notify_admins(
         bot, admin_ids,
         "💳 <b>Клиент сообщил об оплате слота</b>\n\n"
         f"<b>Слот:</b> {format_slot_human(slot)}\n"
         f"{_client_line(callback)}\n\n"
-        f"Проверь оплату в Tribute и подтверди ⇩{warn}",
+        "Проверь оплату в Tribute и подтверди ⇩",
         reply_markup=admin_confirm_pay_kb(booking_id),
     )

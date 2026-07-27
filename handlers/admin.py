@@ -14,6 +14,7 @@ from database import Booking, User, get_session, set_setting
 from filters import IsAdmin
 from formatting import format_slot_human
 from google_calendar import GoogleCalendar
+from handlers.booking import build_event_fields
 from keyboards.inline import broadcast_confirm_kb, lead_done_kb
 
 router = Router()
@@ -77,7 +78,7 @@ async def guide_not_file(message: Message) -> None:
 
 # ── Подтверждение / отклонение оплаты слота ──────────────────────────
 @router.callback_query(F.data.startswith("confirm_pay:"))
-async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
+async def cb_confirm_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar) -> None:
     try:
         booking_id = int(callback.data.split(":", 1)[1])
     except ValueError:
@@ -95,11 +96,27 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
                 f"Эта запись уже обработана ({booking.status})", show_alert=True
             )
             return
+        slot = booking.slot_start
+        if slot.tzinfo is None:
+            slot = slot.replace(tzinfo=timezone.utc)
+        title, desc = await build_event_fields(session, booking.telegram_id)
+
+    event_id = None
+    sync_failed = False
+    try:
+        event_id = await gcal.create_event(slot, title, desc)
+    except Exception:
+        logger.exception("Не удалось создать событие для booking %s", booking_id)
+        sync_failed = True
+
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
         booking.status = "confirmed"
+        booking.google_event_id = event_id
+        booking.calendar_sync_failed = sync_failed
         await session.commit()
-        user_id, slot = booking.telegram_id, booking.slot_start
-    if slot.tzinfo is None:
-        slot = slot.replace(tzinfo=timezone.utc)
+        user_id = booking.telegram_id
+
     try:
         await bot.send_message(
             user_id,
@@ -114,8 +131,9 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
         await callback.message.answer(
             "⚠️ Оплата подтверждена, но сообщение клиенту не доставлено."
         )
+    warn = "\n⚠️ Событие не создалось — оформи вручную." if sync_failed else ""
     await callback.message.edit_text(
-        callback.message.html_text + "\n\n✅ <b>Оплата подтверждена</b>"
+        callback.message.html_text + f"\n\n✅ <b>Оплата подтверждена</b>{warn}"
     )
 
 
