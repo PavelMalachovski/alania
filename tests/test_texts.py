@@ -1,11 +1,11 @@
-from handlers.consultation import CONSULTATION_TEXT
+from handlers.consultation import PERSONAL_WORK_TEXT
 from formatting import PRICE_TEXT
 from keyboards.inline import quiz_result_kb
 
 
-def test_consultation_price_is_canonical():
-    assert PRICE_TEXT in CONSULTATION_TEXT
-    assert "111" not in CONSULTATION_TEXT and "11111" not in CONSULTATION_TEXT
+def test_personal_work_price_is_canonical():
+    assert PRICE_TEXT in PERSONAL_WORK_TEXT
+    assert "111" not in PERSONAL_WORK_TEXT and "11111" not in PERSONAL_WORK_TEXT
 
 
 def test_quiz_result_has_booking_button():
