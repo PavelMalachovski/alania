@@ -327,3 +327,48 @@ async def test_noop_does_not_crash(env):
         if n in ("SendMessage", "EditMessageText") and d.get("chat_id") == CLIENT_ID
     ]
     assert new_client_msgs == []
+
+
+@pytest.mark.asyncio
+async def test_pay_claimed_slot_stays_occupied(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)  # создаёт held → мы жмём paid
+    await press(dp, bot, paid)                 # теперь pay_claimed, события нет
+    # тот же слот больше не предлагается другим
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    slot_iso = b.slot_start.replace(tzinfo=timezone.utc).isoformat() if b.slot_start.tzinfo is None else b.slot_start.isoformat()
+    # заходим на запись заново — этого слота в клавиатуре времени быть не должно
+    await press(dp, bot, "booking_start")
+    # находим день брони и открываем его
+    day = b.slot_start.date().isoformat()
+    await press(dp, bot, f"book_day:{day}")
+    cbs = [x.get("callback_data", "") for row in last_kb(session) for x in row]
+    assert f"book_slot:{slot_iso}" not in cbs
+
+
+@pytest.mark.asyncio
+async def test_sixth_active_booking_blocked(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    # 5 активных confirmed в будущем
+    async with get_session() as s:
+        for i in range(5):
+            s.add(Booking(
+                telegram_id=CLIENT_ID,
+                slot_start=datetime.now(timezone.utc) + timedelta(days=2 + i),
+                status="confirmed",
+            ))
+        await s.commit()
+    await press(dp, bot, "booking_start")
+    day = find_cb(session, "book_day:")
+    await press(dp, bot, day)
+    slot = find_cb(session, "book_slot:")
+    await press(dp, bot, slot)
+    # 6-я — отказ, held не создан
+    from sqlalchemy import select, func
+    async with get_session() as s:
+        held = (await s.execute(select(func.count()).select_from(Booking).where(Booking.status == "held"))).scalar()
+    assert held == 0

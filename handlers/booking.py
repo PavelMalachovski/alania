@@ -61,24 +61,30 @@ async def _render_calendar(
     )
 
 
-async def _active_holds(session, now: datetime) -> list[datetime]:
+MAX_ACTIVE_BOOKINGS = 5
+
+
+async def _occupied_slots(session, now: datetime) -> list[datetime]:
+    """Слоты, занятые до появления события в календаре: held (не истёкшие) и
+    pay_claimed (оплачено, ждёт подтверждения)."""
     rows = (await session.execute(
         select(Booking.slot_start).where(
-            Booking.status == "held", Booking.held_until > now
+            ((Booking.status == "held") & (Booking.held_until > now))
+            | (Booking.status == "pay_claimed")
         )
     )).scalars()
     return [r if r.tzinfo else r.replace(tzinfo=timezone.utc) for r in rows]
 
 
-async def _user_has_active(session, tg_id: int, now: datetime) -> bool:
-    row = (await session.execute(
+async def _active_booking_count(session, tg_id: int, now: datetime) -> int:
+    rows = (await session.execute(
         select(Booking.id).where(
             Booking.telegram_id == tg_id,
             (Booking.status.in_(["confirmed", "pay_claimed"]) & (Booking.slot_start > now))
             | ((Booking.status == "held") & (Booking.held_until > now)),
-        ).limit(1)
-    )).first()
-    return row is not None
+        )
+    )).all()
+    return len(rows)
 
 
 async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]:
@@ -86,7 +92,7 @@ async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]
     horizon_end = now + timedelta(days=cfg.horizon_days)
     busy = await gcal.busy(now, horizon_end)
     async with get_session() as session:
-        holds = await _active_holds(session, now)
+        holds = await _occupied_slots(session, now)
     return free_slots(
         now, busy, holds,
         work_times=cfg.work_times, work_weekdays=cfg.work_weekdays,
@@ -210,9 +216,10 @@ async def cb_book_slot(
         return
 
     async with get_session() as session:
-        if await _user_has_active(session, callback.from_user.id, now):
+        if await _active_booking_count(session, callback.from_user.id, now) >= MAX_ACTIVE_BOOKINGS:
             await callback.answer(
-                "У тебя уже есть активная запись 🤍 Заверши её, прежде чем брать новую.",
+                "У тебя уже 5 активных записей 🤍 Заверши или перенеси одну, "
+                "прежде чем брать новую.",
                 show_alert=True,
             )
             return
