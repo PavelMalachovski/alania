@@ -33,6 +33,12 @@ async def main() -> None:
         raise RuntimeError("Set ADMIN_IDS env var (comma-separated telegram ids)")
     database_url = os.environ["DATABASE_URL"]
 
+    import booking_config
+    from google_calendar import GoogleCalendar
+
+    bcfg = booking_config.load()
+    gcal = GoogleCalendar.from_env()
+
     await init_db(database_url)
 
     bot = Bot(
@@ -52,7 +58,7 @@ async def main() -> None:
 
     followup_task = asyncio.create_task(followup_loop(bot))
     try:
-        await dp.start_polling(bot, admin_ids=admin_ids)
+        await dp.start_polling(bot, admin_ids=admin_ids, booking_config=bcfg, gcal=gcal)
     finally:
         followup_task.cancel()
         await close_db()

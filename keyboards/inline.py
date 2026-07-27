@@ -45,7 +45,7 @@ def consultation_kb():
 
 # ── Запись на слот (календарь) ───────────────────────────────────────
 def booking_days_kb(days: "list[tuple[str, str]]"):
-    """days — список (подпись «Пн 21.07», iso-дата)."""
+    """days — список (подпись «Пн 27.07», iso-дата)."""
     builder = InlineKeyboardBuilder()
     for label, iso in days:
         builder.button(text=label, callback_data=f"book_day:{iso}")
@@ -54,12 +54,22 @@ def booking_days_kb(days: "list[tuple[str, str]]"):
     return builder.as_markup()
 
 
-def booking_times_kb(iso_date: str, free_times: "list[str]"):
+def booking_times_kb(day_iso: str, times: "list[tuple[str, str]]"):
+    """times — список (подпись «12:00 Прага (14:00 Мск)», utc-iso начала слота)."""
     builder = InlineKeyboardBuilder()
-    for t in free_times:
-        builder.button(text=t, callback_data=f"book_slot:{iso_date}:{t}")
+    for label, slot_iso in times:
+        builder.button(text=label, callback_data=f"book_slot:{slot_iso}")
     builder.button(text="⇦ К выбору дня", callback_data="booking_start")
-    builder.adjust(3, 1)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def booking_error_kb():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="↻ Попробовать снова", callback_data="booking_start")
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.button(text="⇦ В главное меню", callback_data="start_menu")
+    builder.adjust(1)
     return builder.as_markup()
 
 
@@ -76,6 +86,7 @@ def booking_pay_kb(booking_id: int):
 def admin_confirm_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Подтвердить оплату", callback_data=f"confirm_pay:{booking_id}")
+    builder.button(text="❌ Оплата не найдена", callback_data=f"reject_pay:{booking_id}")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -209,6 +220,7 @@ def quiz_question_kb(options: "list[tuple[str, int]]", is_first: bool):
 
 def quiz_result_kb():
     builder = InlineKeyboardBuilder()
+    builder.button(text="✦ Записаться на консультацию", callback_data="booking_start")
     builder.button(text="Написать в ЛС", url=DM_URL)
     builder.button(text="Пройти заново", callback_data="quiz_begin")
     builder.button(text="⇦ В меню", callback_data="start_menu")

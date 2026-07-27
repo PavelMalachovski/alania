@@ -3,3 +3,5 @@ sqlalchemy[asyncio]>=2.0
 asyncpg>=0.29
 python-dotenv>=1.0
 tzdata>=2024.1
+google-auth==2.35.0
+google-api-python-client==2.149.0

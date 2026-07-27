@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramAPIError, TelegramRetryAfter
@@ -11,7 +12,8 @@ from sqlalchemy import select
 
 from database import Booking, User, get_session, set_setting
 from filters import IsAdmin
-from handlers.booking import day_label
+from formatting import format_slot_human
+from google_calendar import GoogleCalendar
 from keyboards.inline import broadcast_confirm_kb, lead_done_kb
 
 router = Router()
@@ -44,6 +46,7 @@ async def cmd_admin(message: Message) -> None:
         "<b>Админ-команды:</b>\n\n"
         "/set_guide — загрузить файл гайда «Карта твоего запроса»\n"
         "/broadcast — рассылка всем пользователям бота\n"
+        "/bookings — ближайшие оплаченные записи\n"
         "/cancel — отменить текущее действие"
     )
 
@@ -72,7 +75,7 @@ async def guide_not_file(message: Message) -> None:
     await message.answer("Нужен именно файл (документ). Отмена — /cancel")
 
 
-# ── Подтверждение оплаты слота ───────────────────────────────────────
+# ── Подтверждение / отклонение оплаты слота ──────────────────────────
 @router.callback_query(F.data.startswith("confirm_pay:"))
 async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
     try:
@@ -87,30 +90,100 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot) -> None:
         if booking.status == "confirmed":
             await callback.answer("Уже подтверждено")
             return
+        if booking.status != "pay_claimed":
+            await callback.answer(
+                f"Эта запись уже обработана ({booking.status})", show_alert=True
+            )
+            return
         booking.status = "confirmed"
         await session.commit()
-        user_id, d, t = booking.telegram_id, booking.slot_date, booking.slot_time
-
+        user_id, slot = booking.telegram_id, booking.slot_start
+    if slot.tzinfo is None:
+        slot = slot.replace(tzinfo=timezone.utc)
     try:
         await bot.send_message(
             user_id,
             "○─── ☾ ───○\n\n"
             "<b>✦ Вы оплатили, спасибо!</b> 🤍\n\n"
-            f"Твоя запись подтверждена: <b>{day_label(d)} в {t}</b> "
-            "(время Прага / CET).\n\n"
-            "Лана свяжется с тобой перед сессией и пришлёт ссылку "
-            "на видеозвонок. До встречи ✦",
+            f"Запись подтверждена: <b>{format_slot_human(slot)}</b>.\n\n"
+            "Лана свяжется с тобой перед сессией и пришлёт ссылку на видеозвонок. "
+            "До встречи ✦",
             reply_markup=lead_done_kb(),
         )
     except TelegramAPIError:
         await callback.message.answer(
-            "⚠️ Оплата подтверждена, но сообщение клиенту не доставлено "
-            "(возможно, он заблокировал бота)."
+            "⚠️ Оплата подтверждена, но сообщение клиенту не доставлено."
         )
-
     await callback.message.edit_text(
         callback.message.html_text + "\n\n✅ <b>Оплата подтверждена</b>"
     )
+
+
+@router.callback_query(F.data.startswith("reject_pay:"))
+async def cb_reject_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking:
+            await callback.answer("Запись не найдена", show_alert=True)
+            return
+        if booking.status == "cancelled":
+            await callback.answer("Уже отменено")
+            return
+        if booking.status == "confirmed":
+            await callback.answer(
+                "Запись уже подтверждена, отклонить нельзя", show_alert=True
+            )
+            return
+        event_id = booking.google_event_id
+        booking.status = "cancelled"
+        await session.commit()
+        user_id, slot = booking.telegram_id, booking.slot_start
+    if event_id:
+        try:
+            await gcal.delete_event(event_id)
+        except Exception:
+            logger.exception("Не удалось удалить событие %s", event_id)
+    if slot.tzinfo is None:
+        slot = slot.replace(tzinfo=timezone.utc)
+    try:
+        await bot.send_message(
+            user_id,
+            "○─── ☾ ───○\n\n"
+            "К сожалению, оплату по этой записи мы не нашли, и слот освобождён.\n"
+            "Если ты оплачивал(а) — напиши Лане в ЛС, разберёмся 🤍",
+            reply_markup=lead_done_kb(),
+        )
+    except TelegramAPIError:
+        pass
+    await callback.message.edit_text(
+        callback.message.html_text + "\n\n❌ <b>Оплата отклонена, слот освобождён</b>"
+    )
+
+
+@router.message(Command("bookings"))
+async def cmd_bookings(message: Message) -> None:
+    now = datetime.now(timezone.utc)
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(Booking).where(
+                Booking.status.in_(["pay_claimed", "confirmed"]),
+                Booking.slot_start >= now,
+            ).order_by(Booking.slot_start)
+        )).scalars().all()
+    if not rows:
+        await message.answer("Ближайших оплаченных записей нет.")
+        return
+    lines = ["<b>Ближайшие записи:</b>\n"]
+    for b in rows:
+        slot = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
+        mark = "✅" if b.status == "confirmed" else "💳"
+        warn = " ⚠️календарь" if b.calendar_sync_failed else ""
+        lines.append(f"{mark} {format_slot_human(slot)} — id {b.telegram_id}{warn}")
+    await message.answer("\n".join(lines))
 
 
 # ── Рассылка ─────────────────────────────────────────────────────────
