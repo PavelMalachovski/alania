@@ -1002,9 +1002,18 @@ git commit -m "Перенос записи: выбор слота, ≥24ч са�
 ```python
 async def _pending_near(env):
     dp, bot, gcal, session = env
-    slot = datetime.now(timezone.utc) + timedelta(hours=2)
+    import booking_config
+    from slots import free_slots
+    cfg = booking_config.load()
+    now = datetime.now(timezone.utc)
+    slot = now + timedelta(hours=2)          # исходная сессия <24ч
     eid = await gcal.create_event(slot, "Клиент", "desc")
-    new_slot = datetime.now(timezone.utc) + timedelta(days=3)
+    # reschedule_to должен быть РЕАЛЬНЫМ слотом по сетке (free_slots отдаёт только
+    # сеточные времена), иначе approve-хендлер честно сочтёт его занятым.
+    free = free_slots(now, [], [], work_times=cfg.work_times,
+                      work_weekdays=cfg.work_weekdays, horizon_days=cfg.horizon_days,
+                      lead=cfg.lead, tz=cfg.tz)
+    new_slot = next(s for s in free if s - now >= timedelta(days=1))
     async with get_session() as s:
         b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
                     google_event_id=eid, reschedule_to=new_slot,
