@@ -141,6 +141,14 @@ def admin_confirm_pay_kb(booking_id: int):
     return builder.as_markup()
 
 
+def admin_resched_kb(booking_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Подтвердить перенос", callback_data=f"resched_ok:{booking_id}")
+    builder.button(text="❌ Отклонить перенос", callback_data=f"resched_no:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def my_bookings_kb(items: "list[tuple[str, int]]"):
     """items — (подпись слота, booking_id)."""
     builder = InlineKeyboardBuilder()

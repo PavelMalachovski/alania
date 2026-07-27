@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.base import BaseSession
 from aiogram.enums import ParseMode
@@ -10,8 +10,6 @@ from aiogram.types import CallbackQuery, Chat, Message, Update, User as TgUser
 
 import database
 from database import Booking, get_session, init_db, close_db
-from handlers import setup_routers
-from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
 import booking_config
 
 CLIENT_ID, ADMIN_ID = 501, 902
@@ -63,20 +61,9 @@ class FakeSession(BaseSession):
 
 import pytest_asyncio
 
-
-# aiogram Router-объекты в handlers/*.py — модульные синглтоны: include_router
-# намертво привязывает router.parent_router и падает RuntimeError при повторном
-# include_router() того же router в другой Dispatcher. setup_routers() поэтому
-# можно безопасно вызвать только один раз за процесс — dp собираем на весь
-# модуль тестов, а не в каждом тесте отдельно (per-test заново создавать нельзя).
-@pytest.fixture(scope="module")
-def _dp():
-    dp = Dispatcher()
-    dp.callback_query.outer_middleware(CallbackSafetyMiddleware())
-    dp.callback_query.outer_middleware(EventLoggingMiddleware())
-    dp.message.outer_middleware(EventLoggingMiddleware())
-    dp.include_router(setup_routers())
-    return dp
+# _dp (собранный на весь процесс Dispatcher с роутерами) живёт в
+# tests/conftest.py — см. комментарий там про переиспользование харнеса
+# несколькими тестовыми файлами (test_reschedule.py и т.д.).
 
 
 @pytest_asyncio.fixture

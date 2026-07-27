@@ -3,7 +3,10 @@ from datetime import date, datetime, timedelta, timezone
 
 from aiogram import Bot, F, Router, html
 from aiogram.exceptions import TelegramAPIError
-from aiogram.types import CallbackQuery
+from aiogram.filters import StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
 from booking_config import BookingConfig
@@ -12,10 +15,12 @@ from formatting import PRICE_TEXT, format_slot_human
 from google_calendar import GoogleCalendar
 from keyboards.inline import (
     admin_confirm_pay_kb,
+    admin_resched_kb,
     booking_calendar_kb,
     booking_error_kb,
     booking_pay_kb,
     booking_times_kb,
+    lead_done_kb,
     my_bookings_kb,
 )
 from slots import free_slots
@@ -38,7 +43,8 @@ def _month_index(year: int, month: int) -> int:
 
 
 async def _render_calendar(
-    message, year: int, month: int, slots: list[datetime], cfg: BookingConfig
+    message, year: int, month: int, slots: list[datetime], cfg: BookingConfig,
+    *, prefix: str = "book", back_cb: str = "consultation",
 ) -> None:
     """Рисует сетку месяца по свободным слотам (aware-UTC список slots)."""
     tz = cfg.tz
@@ -58,6 +64,7 @@ async def _render_calendar(
         reply_markup=booking_calendar_kb(
             year, month, free_dates,
             has_prev=cur_mi > min_mi, has_next=cur_mi < max_mi,
+            prefix=prefix, back_cb=back_cb,
         ),
     )
 
@@ -338,4 +345,213 @@ async def cb_my_bookings(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         "○─── ☾ ───○\n\n<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩",
         reply_markup=my_bookings_kb(items),
+    )
+
+
+RESCHEDULE_THRESHOLD = timedelta(hours=24)
+
+
+class RescheduleForm(StatesGroup):
+    picking = State()
+    reason = State()
+
+
+async def apply_reschedule(gcal, session, booking, new_slot: datetime) -> bool:
+    """Двигает бронь на new_slot. Для confirmed с событием — пересоздаёт событие
+    (delete старое + create новое). Возвращает True если Google не подвёл."""
+    sync_ok = True
+    if booking.google_event_id:
+        try:
+            await gcal.delete_event(booking.google_event_id)
+        except Exception:
+            logger.exception("Не удалось удалить старое событие при переносе")
+        try:
+            title, desc = await build_event_fields(session, booking.telegram_id)
+            booking.google_event_id = await gcal.create_event(new_slot, title, desc)
+        except Exception:
+            logger.exception("Не удалось создать новое событие при переносе")
+            booking.google_event_id = None
+            booking.calendar_sync_failed = True
+            sync_ok = False
+    booking.slot_start = new_slot
+    return sync_ok
+
+
+@router.callback_query(F.data.startswith("resched:"))
+async def cb_resched_start(callback: CallbackQuery, state: FSMContext,
+                           gcal: GoogleCalendar, booking_config: BookingConfig) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        await callback.answer("Не понял запись", show_alert=True)
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if (not booking or booking.telegram_id != callback.from_user.id
+                or booking.status not in ("pay_claimed", "confirmed")):
+            await callback.answer("Запись недоступна для переноса", show_alert=True)
+            return
+    await state.set_state(RescheduleForm.picking)
+    await state.update_data(resched_booking_id=booking_id)
+    try:
+        slots = await _load_free(gcal, booking_config)
+    except Exception:
+        logger.exception("Google недоступен при старте переноса")
+        await callback.message.edit_text(
+            "Расписание сейчас недоступно 🤍 Попробуй ещё раз.",
+            reply_markup=booking_error_kb(),
+        )
+        return
+    if not slots:
+        await callback.answer("Свободного времени сейчас нет", show_alert=True)
+        return
+    first = slots[0].astimezone(booking_config.tz).date()
+    await _render_calendar(callback.message, first.year, first.month, slots,
+                           booking_config, prefix="resched", back_cb="my_bookings")
+
+
+@router.callback_query(RescheduleForm.picking, F.data.startswith("resched_month:"))
+async def cb_resched_month(callback: CallbackQuery, gcal: GoogleCalendar,
+                           booking_config: BookingConfig) -> None:
+    try:
+        y, m = (int(x) for x in callback.data.split(":", 1)[1].split("-"))
+    except ValueError:
+        await callback.answer("Не понял месяц", show_alert=True)
+        return
+    try:
+        slots = await _load_free(gcal, booking_config)
+    except Exception:
+        await callback.message.edit_text(
+            "Расписание сейчас недоступно 🤍", reply_markup=booking_error_kb())
+        return
+    await _render_calendar(callback.message, y, m, slots, booking_config,
+                           prefix="resched", back_cb="my_bookings")
+
+
+@router.callback_query(RescheduleForm.picking, F.data.startswith("resched_day:"))
+async def cb_resched_day(callback: CallbackQuery, gcal: GoogleCalendar,
+                         booking_config: BookingConfig) -> None:
+    try:
+        d = date.fromisoformat(callback.data.split(":", 1)[1])
+    except ValueError:
+        await callback.answer("Не понял день", show_alert=True)
+        return
+    try:
+        slots = await _load_free(gcal, booking_config)
+    except Exception:
+        await callback.message.edit_text(
+            "Расписание сейчас недоступно 🤍", reply_markup=booking_error_kb())
+        return
+    day_slots = [s for s in slots if s.astimezone(booking_config.tz).date() == d]
+    if not day_slots:
+        await callback.answer("На этот день нет свободного времени", show_alert=True)
+        return
+    time_buttons = [(format_slot_human(s).split("·", 1)[1].strip(), s.isoformat())
+                    for s in day_slots]
+    await callback.message.edit_text(
+        f"<b>✦ Перенос на {_WEEKDAYS_RU[d.weekday()]} {d.strftime('%d.%m')}</b>\n\n"
+        "Выбери время ⇩",
+        reply_markup=booking_times_kb(
+            d.isoformat(), time_buttons, prefix="resched",
+            back_cb=f"resched_month:{d.year}-{d.month:02d}"),
+    )
+
+
+@router.callback_query(RescheduleForm.picking, F.data.startswith("resched_slot:"))
+async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
+                          admin_ids: list[int], gcal: GoogleCalendar,
+                          booking_config: BookingConfig) -> None:
+    try:
+        new_slot = datetime.fromisoformat(callback.data.split(":", 1)[1]).astimezone(timezone.utc)
+    except ValueError:
+        await callback.answer("Не понял слот", show_alert=True)
+        return
+    data = await state.get_data()
+    booking_id = data.get("resched_booking_id")
+    if not booking_id:
+        await callback.answer("Сессия сброшена, открой «Мои записи» заново", show_alert=True)
+        return
+    now = datetime.now(timezone.utc)
+    try:
+        free = await _load_free(gcal, booking_config)
+    except Exception:
+        await callback.message.edit_text(
+            "Расписание сейчас недоступно 🤍", reply_markup=booking_error_kb())
+        return
+    if new_slot not in free:
+        await callback.answer("Это время только что заняли 🤍 Выбери другое", show_alert=True)
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.telegram_id != callback.from_user.id:
+            await callback.answer("Запись не найдена", show_alert=True)
+            await state.clear()
+            return
+        old_slot = booking.slot_start if booking.slot_start.tzinfo else booking.slot_start.replace(tzinfo=timezone.utc)
+
+        if old_slot - now >= RESCHEDULE_THRESHOLD:
+            # самостоятельный перенос
+            await apply_reschedule(gcal, session, booking, new_slot)
+            await session.commit()
+            await state.clear()
+            await callback.message.edit_text(
+                "○─── ☾ ───○\n\n"
+                f"✦ Перенесено на <b>{format_slot_human(new_slot)}</b> 🤍",
+                reply_markup=lead_done_kb(),
+            )
+            await _notify_admins(
+                bot, admin_ids,
+                "🔁 <b>Клиент перенёс запись</b>\n\n"
+                f"Было: {format_slot_human(old_slot)}\n"
+                f"Стало: {format_slot_human(new_slot)}\n"
+                f"{_client_line(callback)}",
+            )
+            return
+
+    # <24ч — просим причину (new_slot в FSM), pending выставим после причины
+    await state.update_data(resched_new_slot=new_slot.isoformat())
+    await state.set_state(RescheduleForm.reason)
+    await callback.message.edit_text(
+        "○─── ☾ ───○\n\n"
+        "До сессии меньше 24 часов — перенос подтверждает Лана.\n\n"
+        "Напиши, пожалуйста, причину переноса ⇩"
+    )
+
+
+@router.message(RescheduleForm.reason, F.text)
+async def resched_reason(message: Message, state: FSMContext, bot: Bot,
+                         admin_ids: list[int]) -> None:
+    data = await state.get_data()
+    booking_id = data.get("resched_booking_id")
+    new_slot_iso = data.get("resched_new_slot")
+    await state.clear()
+    if not booking_id or not new_slot_iso:
+        await message.answer("Сессия сброшена, открой «Мои записи» заново.")
+        return
+    new_slot = datetime.fromisoformat(new_slot_iso)
+    reason = message.text.strip()[:500]
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.telegram_id != message.from_user.id:
+            await message.answer("Запись не найдена.")
+            return
+        old_slot = booking.slot_start if booking.slot_start.tzinfo else booking.slot_start.replace(tzinfo=timezone.utc)
+        booking.reschedule_to = new_slot
+        booking.reschedule_reason = reason
+        booking.reschedule_status = "pending"
+        await session.commit()
+    await message.answer(
+        "○─── ☾ ───○\n\n"
+        "🤍 Запрос на перенос отправлен Лане. Как решится — пришлём сообщение.",
+        reply_markup=lead_done_kb(),
+    )
+    await _notify_admins(
+        bot, admin_ids,
+        "🔁 <b>Запрос на перенос (меньше 24ч)</b>\n\n"
+        f"Было: {format_slot_human(old_slot)}\n"
+        f"Хочет: {format_slot_human(new_slot)}\n"
+        f"Причина: {html.quote(reason)}\n"
+        f'<b>Клиент:</b> id {message.from_user.id}\n\n'
+        "Подтвердить перенос? ⇩",
+        reply_markup=admin_resched_kb(booking_id),
     )
