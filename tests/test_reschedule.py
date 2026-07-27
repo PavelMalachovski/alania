@@ -281,6 +281,7 @@ async def test_resched_reject_collapses_admin_notification(env):
     await press(dp, bot, f"resched_no:{bid}", user=admin, chat_id=ADMIN_ID)
     edits = [d for n, d in session.log
              if n == "EditMessageText" and d.get("chat_id") == ADMIN_ID]
+    assert edits[-1]["text"].startswith("❌")   # старый код начинался бы с "x"
     assert "отклонён" in edits[-1]["text"].lower()
     assert "Причина:" not in edits[-1]["text"]
 

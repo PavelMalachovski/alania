@@ -469,6 +469,7 @@ async def test_confirm_collapses_admin_notification(env):
     edits = [d for n, d in session.log
              if n == "EditMessageText" and d.get("chat_id") == ADMIN_ID]
     last = edits[-1]["text"]
+    assert last.startswith("✅")          # старый код начинался бы с "x"
     assert "подтвержд" in last.lower()
     assert "Проверь оплату в Tribute" not in last   # полный исходный текст ушёл
 
