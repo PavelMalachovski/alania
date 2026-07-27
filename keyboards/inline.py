@@ -21,6 +21,7 @@ def main_menu_kb():
         text="✦ Тест «Кто управляет твоей жизнью?»",
         callback_data="quiz_intro",
     )
+    builder.button(text="Мои записи", callback_data="my_bookings")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -63,21 +64,22 @@ def _next_ym(year: int, month: int) -> str:
 
 
 def booking_calendar_kb(
-    year: int, month: int, free_dates: "set[_date]", has_prev: bool, has_next: bool
+    year: int, month: int, free_dates: "set[_date]", has_prev: bool, has_next: bool,
+    *, prefix: str = "book", back_cb: str = "consultation"
 ):
     """Сетка месяца Пн–Вс. free_dates — дни этого месяца со свободными слотами
-    (кнопки book_day:<iso>); остальные ячейки неактивны (callback noop)."""
+    (кнопки {prefix}_day:<iso>); остальные ячейки неактивны (callback noop)."""
     builder = InlineKeyboardBuilder()
 
     # строка навигации: ‹  Месяц Год  ›
     builder.button(
         text="‹" if has_prev else " ",
-        callback_data=f"book_month:{_prev_ym(year, month)}" if has_prev else "noop",
+        callback_data=f"{prefix}_month:{_prev_ym(year, month)}" if has_prev else "noop",
     )
     builder.button(text=f"{_MONTHS_RU[month]} {year}", callback_data="noop")
     builder.button(
         text="›" if has_next else " ",
-        callback_data=f"book_month:{_next_ym(year, month)}" if has_next else "noop",
+        callback_data=f"{prefix}_month:{_next_ym(year, month)}" if has_next else "noop",
     )
 
     # шапка дней недели
@@ -91,22 +93,23 @@ def booking_calendar_kb(
             if d.month != month:
                 builder.button(text="·", callback_data="noop")
             elif d in free_dates:
-                builder.button(text=str(d.day), callback_data=f"book_day:{d.isoformat()}")
+                builder.button(text=str(d.day), callback_data=f"{prefix}_day:{d.isoformat()}")
             else:
                 builder.button(text="·", callback_data="noop")
 
-    builder.button(text="⇦ Назад", callback_data="consultation")
+    builder.button(text="⇦ Назад", callback_data=back_cb)
     # раскладка: nav(3) · шапка(7) · по 7 на неделю · назад(1)
     builder.adjust(3, 7, *([7] * len(weeks)), 1)
     return builder.as_markup()
 
 
-def booking_times_kb(day_iso: str, times: "list[tuple[str, str]]"):
+def booking_times_kb(day_iso: str, times: "list[tuple[str, str]]",
+    *, prefix: str = "book", back_cb: str = "booking_start"):
     """times — список (подпись «12:00 Прага (14:00 Мск)», utc-iso начала слота)."""
     builder = InlineKeyboardBuilder()
     for label, slot_iso in times:
-        builder.button(text=label, callback_data=f"book_slot:{slot_iso}")
-    builder.button(text="⇦ К выбору дня", callback_data="booking_start")
+        builder.button(text=label, callback_data=f"{prefix}_slot:{slot_iso}")
+    builder.button(text="⇦ К выбору дня", callback_data=back_cb)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -134,6 +137,24 @@ def admin_confirm_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Подтвердить оплату", callback_data=f"confirm_pay:{booking_id}")
     builder.button(text="❌ Оплата не найдена", callback_data=f"reject_pay:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def admin_resched_kb(booking_id: int):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="✅ Подтвердить перенос", callback_data=f"resched_ok:{booking_id}")
+    builder.button(text="❌ Отклонить перенос", callback_data=f"resched_no:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def my_bookings_kb(items: "list[tuple[str, int]]"):
+    """items — (подпись слота, booking_id)."""
+    builder = InlineKeyboardBuilder()
+    for label, bid in items:
+        builder.button(text=f"Перенести · {label}", callback_data=f"resched:{bid}")
+    builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 

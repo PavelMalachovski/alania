@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.base import BaseSession
 from aiogram.enums import ParseMode
@@ -10,8 +10,6 @@ from aiogram.types import CallbackQuery, Chat, Message, Update, User as TgUser
 
 import database
 from database import Booking, get_session, init_db, close_db
-from handlers import setup_routers
-from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
 import booking_config
 
 CLIENT_ID, ADMIN_ID = 501, 902
@@ -63,20 +61,9 @@ class FakeSession(BaseSession):
 
 import pytest_asyncio
 
-
-# aiogram Router-объекты в handlers/*.py — модульные синглтоны: include_router
-# намертво привязывает router.parent_router и падает RuntimeError при повторном
-# include_router() того же router в другой Dispatcher. setup_routers() поэтому
-# можно безопасно вызвать только один раз за процесс — dp собираем на весь
-# модуль тестов, а не в каждом тесте отдельно (per-test заново создавать нельзя).
-@pytest.fixture(scope="module")
-def _dp():
-    dp = Dispatcher()
-    dp.callback_query.outer_middleware(CallbackSafetyMiddleware())
-    dp.callback_query.outer_middleware(EventLoggingMiddleware())
-    dp.message.outer_middleware(EventLoggingMiddleware())
-    dp.include_router(setup_routers())
-    return dp
+# _dp (собранный на весь процесс Dispatcher с роутерами) живёт в
+# tests/conftest.py — см. комментарий там про переиспользование харнеса
+# несколькими тестовыми файлами (test_reschedule.py и т.д.).
 
 
 @pytest_asyncio.fixture
@@ -90,6 +77,14 @@ async def env(_dp):
     _dp["admin_ids"] = [ADMIN_ID]
     _dp["booking_config"] = cfg
     _dp["gcal"] = gcal
+    # _dp — session-scoped, его MemoryStorage переживает между тестами. FSM-флоу
+    # (перенос) может оставить состояние в picking/reason со stale data — чистим
+    # хранилище для тестовых ключей ПЕРЕД каждым тестом, чтобы старт был с нуля.
+    from aiogram.fsm.storage.base import StorageKey
+    for uid in (CLIENT_ID, ADMIN_ID):
+        key = StorageKey(bot_id=bot.id, chat_id=uid, user_id=uid)
+        await _dp.storage.set_state(key, None)
+        await _dp.storage.set_data(key, {})
     yield _dp, bot, gcal, session
     await close_db()
     database.engine = None
@@ -166,7 +161,11 @@ async def _book_one(dp, bot, session):
 
 
 @pytest.mark.asyncio
-async def test_paid_creates_event_and_notifies_admin(env):
+async def test_paid_notifies_admin_without_creating_event(env):
+    # переименовано из test_paid_creates_event_and_notifies_admin: событие
+    # теперь создаётся на confirm (см. test_event_created_on_confirm_not_on_paid),
+    # а не на paid — здесь фиксируем, что paid только переводит статус и шлёт
+    # админу кнопки, календаря не касаясь.
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
@@ -174,7 +173,8 @@ async def test_paid_creates_event_and_notifies_admin(env):
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "pay_claimed"
-    assert b.google_event_id in gcal.events
+    assert b.google_event_id is None
+    assert gcal.events == {}
     # админу ушло уведомление с кнопками подтвердить/отклонить
     admin_kb = last_kb(session, chat_id=ADMIN_ID)
     flat = [x.get("callback_data", "") for row in admin_kb for x in row]
@@ -183,24 +183,75 @@ async def test_paid_creates_event_and_notifies_admin(env):
 
 
 @pytest.mark.asyncio
-async def test_double_paid_creates_single_event(env):
+async def test_event_created_on_confirm_not_on_paid(env):
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
-    await press(dp, bot, paid)  # второй клик
-    assert len(gcal.events) == 1
+    assert gcal.events == {}          # после «оплатил» события ещё нет
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    assert len(gcal.events) == 1      # событие появилось на подтверждении
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "confirmed" and b.google_event_id in gcal.events
 
 
 @pytest.mark.asyncio
-async def test_reject_pay_deletes_event_and_frees_slot(env):
+async def test_reject_from_pay_claimed_touches_no_calendar(env):
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
     await press(dp, bot, paid)
     reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
     admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
     await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
-    assert len(gcal.deleted) == 1
+    assert gcal.events == {} and gcal.deleted == []
     from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    assert b.status == "cancelled"
+
+
+@pytest.mark.asyncio
+async def test_double_confirm_creates_single_event(env):
+    # переименовано из test_double_paid_creates_single_event: событие теперь
+    # создаётся в cb_confirm_pay, поэтому double-click-защита от дублирующего
+    # события переехала туда же (двойной paid больше не трогает календарь
+    # вообще — см. test_paid_notifies_admin_without_creating_event).
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)  # второй клик
+    assert len(gcal.events) == 1
+
+
+@pytest.mark.asyncio
+async def test_reject_pay_deletes_event_and_frees_slot(env):
+    # переименовано по смыслу не было, но сценарий адаптирован: в новой схеме
+    # pay_claimed никогда не получает google_event_id естественным путём
+    # (событие появляется только вместе с переходом в confirmed) — реальный
+    # UI-флоу это больше не воспроизводит. Тест проверяет defense-in-depth
+    # ветку `if event_id:` в cb_reject_pay, вручную проставляя event_id на
+    # pay_claimed-записи (как если бы это состояние возникло нештатно) —
+    # чтобы удаление события при отклонении не осталось без покрытия.
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+        b.google_event_id = "evt_manual"
+        await s.commit()
+    gcal.events["evt_manual"] = b.slot_start
+    reject = find_cb(session, "reject_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, reject, user=admin, chat_id=ADMIN_ID)
+    assert gcal.deleted == ["evt_manual"]
+    assert "evt_manual" not in gcal.events
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
     assert b.status == "cancelled"
@@ -222,17 +273,24 @@ async def test_confirm_pay_notifies_client(env):
 
 @pytest.mark.asyncio
 async def test_calendar_sync_failure_still_records_payment(env):
+    # адаптировано: Google теперь дёргается в cb_confirm_pay, а не в cb_paid —
+    # падение имитируем на confirm; запись всё равно переходит в confirmed
+    # (админ уже проверил оплату), просто с пометкой calendar_sync_failed.
     dp, bot, gcal, session = env
     paid = await _book_one(dp, bot, session)
+    await press(dp, bot, paid)
     async def boom(*a, **k):
         raise RuntimeError("insert failed")
     gcal.create_event = boom
-    await press(dp, bot, paid)
+    confirm = find_cb(session, "confirm_pay:", chat_id=ADMIN_ID)
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, confirm, user=admin, chat_id=ADMIN_ID)
     from sqlalchemy import select
     async with get_session() as s:
         b = (await s.execute(select(Booking))).scalar_one()
-    assert b.status == "pay_claimed"
+    assert b.status == "confirmed"
     assert b.calendar_sync_failed is True
+    assert b.google_event_id is None
 
 
 @pytest.mark.asyncio
@@ -327,3 +385,90 @@ async def test_noop_does_not_crash(env):
         if n in ("SendMessage", "EditMessageText") and d.get("chat_id") == CLIENT_ID
     ]
     assert new_client_msgs == []
+
+
+@pytest.mark.asyncio
+async def test_pay_claimed_slot_stays_occupied(env):
+    dp, bot, gcal, session = env
+    paid = await _book_one(dp, bot, session)  # создаёт held → мы жмём paid
+    await press(dp, bot, paid)                 # теперь pay_claimed, события нет
+    # тот же слот больше не предлагается другим
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking))).scalar_one()
+    slot_iso = b.slot_start.replace(tzinfo=timezone.utc).isoformat() if b.slot_start.tzinfo is None else b.slot_start.isoformat()
+    # заходим на запись заново — этого слота в клавиатуре времени быть не должно
+    await press(dp, bot, "booking_start")
+    # находим день брони и открываем его
+    day = b.slot_start.date().isoformat()
+    await press(dp, bot, f"book_day:{day}")
+    cbs = [x.get("callback_data", "") for row in last_kb(session) for x in row]
+    assert f"book_slot:{slot_iso}" not in cbs
+
+
+@pytest.mark.asyncio
+async def test_fifth_active_booking_allowed(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import select, func
+    # 4 активных confirmed в будущем
+    async with get_session() as s:
+        for i in range(4):
+            s.add(Booking(
+                telegram_id=CLIENT_ID,
+                slot_start=datetime.now(timezone.utc) + timedelta(days=2 + i),
+                status="confirmed",
+            ))
+        await s.commit()
+    # 5-я бронь должна пройти (при лимите=1 упала бы)
+    await press(dp, bot, "booking_start")
+    await press(dp, bot, find_cb(session, "book_day:"))
+    await press(dp, bot, find_cb(session, "book_slot:"))
+    async with get_session() as s:
+        held = (await s.execute(
+            select(func.count()).select_from(Booking).where(Booking.status == "held")
+        )).scalar()
+    assert held == 1   # 5-я запись создана как held
+
+
+@pytest.mark.asyncio
+async def test_sixth_active_booking_blocked(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    # 5 активных confirmed в будущем
+    async with get_session() as s:
+        for i in range(5):
+            s.add(Booking(
+                telegram_id=CLIENT_ID,
+                slot_start=datetime.now(timezone.utc) + timedelta(days=2 + i),
+                status="confirmed",
+            ))
+        await s.commit()
+    await press(dp, bot, "booking_start")
+    day = find_cb(session, "book_day:")
+    await press(dp, bot, day)
+    slot = find_cb(session, "book_slot:")
+    await press(dp, bot, slot)
+    # 6-я — отказ, held не создан
+    from sqlalchemy import select, func
+    async with get_session() as s:
+        held = (await s.execute(select(func.count()).select_from(Booking).where(Booking.status == "held"))).scalar()
+    assert held == 0
+
+
+@pytest.mark.asyncio
+async def test_my_bookings_lists_future_paid(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    async with get_session() as s:
+        s.add(Booking(telegram_id=CLIENT_ID,
+                      slot_start=datetime.now(timezone.utc) + timedelta(days=3),
+                      status="confirmed"))
+        s.add(Booking(telegram_id=CLIENT_ID,
+                      slot_start=datetime.now(timezone.utc) - timedelta(days=3),
+                      status="confirmed"))  # прошлая — не показывать
+        await s.commit()
+    await press(dp, bot, "my_bookings")
+    cbs = [b.get("callback_data", "") for row in last_kb(session) for b in row]
+    assert sum(c.startswith("resched:") for c in cbs) == 1

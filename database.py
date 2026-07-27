@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     func,
+    text,
 )
 from sqlalchemy.ext.asyncio import (
     AsyncAttrs,
@@ -65,6 +66,9 @@ class Booking(Base):
     held_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     google_event_id: Mapped[str | None] = mapped_column(String(1024))
     calendar_sync_failed: Mapped[bool] = mapped_column(default=False)
+    reschedule_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reschedule_reason: Mapped[str | None] = mapped_column(String(500))
+    reschedule_status: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -88,6 +92,17 @@ class Event(Base):
     )
 
 
+# Идемпотентные ALTER для полей, добавленных после первого create_all.
+# create_all создаёт только отсутствующие таблицы, но не добавляет колонки в
+# существующие — на Postgres их доводим здесь. sqlite (тесты) получает полную
+# схему сразу через create_all, поэтому миграции для него не нужны.
+_MIGRATIONS = [
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_to TIMESTAMP WITH TIME ZONE",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_reason VARCHAR(500)",
+    "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_status VARCHAR(20)",
+]
+
+
 async def init_db(database_url: str) -> None:
     global engine, async_session
     # Railway provides postgresql:// but asyncpg needs postgresql+asyncpg://
@@ -97,6 +112,9 @@ async def init_db(database_url: str) -> None:
     async_session = async_sessionmaker(engine, expire_on_commit=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if engine.dialect.name == "postgresql":
+            for ddl in _MIGRATIONS:
+                await conn.execute(text(ddl))
 
 
 def get_session() -> AsyncSession:
