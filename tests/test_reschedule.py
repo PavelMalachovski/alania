@@ -152,3 +152,39 @@ async def test_admin_reject_cancels_without_refund(env):
     assert old_eid in gcal.deleted
     client_texts = [d.get("text", "") for n, d in session.log if d.get("chat_id") == CLIENT_ID]
     assert any("не возвращается" in t for t in client_texts)
+
+
+@pytest.mark.asyncio
+async def test_resched_ok_non_pending_is_noop(env):
+    dp, bot, gcal, session = env
+    from aiogram.types import User as TgUser
+    slot = datetime.now(timezone.utc) + timedelta(days=5)
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=eid)  # reschedule_status=None → НЕ pending
+        s.add(b); await s.commit(); bid = b.id
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_ok:{bid}", user=admin, chat_id=ADMIN_ID)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.status == "confirmed"                     # не тронут
+    assert b.slot_start.replace(tzinfo=timezone.utc) == slot
+    assert gcal.deleted == [] and eid in gcal.events   # календарь не тронут
+
+
+@pytest.mark.asyncio
+async def test_approve_when_new_slot_taken_keeps_original(env):
+    dp, bot, gcal, session = env
+    from aiogram.types import User as TgUser
+    bid, old_eid, new_slot = await _pending_near(env)   # pending с реальным new_slot
+    # делаем new_slot занятым в Google
+    gcal.busy_intervals = [(new_slot, new_slot + timedelta(hours=1))]
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_ok:{bid}", user=admin, chat_id=ADMIN_ID)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status is None                  # pending снят
+    assert b.status == "confirmed"                      # НЕ отменён
+    assert b.slot_start.replace(tzinfo=timezone.utc) != new_slot  # не двинут
+    assert old_eid not in gcal.deleted                  # старое событие не удалено
