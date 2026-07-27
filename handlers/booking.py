@@ -24,6 +24,7 @@ from keyboards.inline import (
     my_bookings_kb,
 )
 from slots import free_slots
+from ui import delete_safe, edit_screen
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -514,8 +515,11 @@ async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
             )
             return
 
-    # <24ч — просим причину (new_slot в FSM), pending выставим после причины
-    await state.update_data(resched_new_slot=new_slot.isoformat())
+    # <24ч — просим причину; якорь = это же сообщение, его и будем редактировать
+    await state.update_data(
+        resched_new_slot=new_slot.isoformat(),
+        resched_screen_id=callback.message.message_id,
+    )
     await state.set_state(RescheduleForm.reason)
     await callback.message.edit_text(
         "○─── ☾ ───○\n\n"
@@ -527,35 +531,44 @@ async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
 @router.message(RescheduleForm.reason, F.text)
 async def resched_reason(message: Message, state: FSMContext, bot: Bot,
                          admin_ids: list[int]) -> None:
-    if message.text.startswith("/"):
-        # команда (/cancel, /start и т.п.) вместо причины — не сохраняем её
-        # как причину переноса, просто выходим из FSM
-        await state.clear()
-        await message.answer("Ок, перенос отменён.")
-        return
     data = await state.get_data()
+    screen_id = data.get("resched_screen_id")
+    chat_id = message.chat.id
+
+    async def _finish_screen(text: str, kb=None) -> None:
+        # убрать текст клиента и обновить якорь (или прислать новое, если якорь потерян)
+        await delete_safe(bot, chat_id, message.message_id)
+        if screen_id:
+            await edit_screen(bot, chat_id, screen_id, text, kb)
+        else:
+            await message.answer(text, reply_markup=kb)
+
+    if message.text.startswith("/"):
+        await state.clear()
+        await _finish_screen("Ок, перенос отменён.", lead_done_kb())
+        return
     booking_id = data.get("resched_booking_id")
     new_slot_iso = data.get("resched_new_slot")
     await state.clear()
     if not booking_id or not new_slot_iso:
-        await message.answer("Сессия сброшена, открой «Мои записи» заново.")
+        await _finish_screen("Сессия сброшена, открой «Мои записи» заново.", lead_done_kb())
         return
     new_slot = datetime.fromisoformat(new_slot_iso)
     reason = message.text.strip()[:500]
     async with get_session() as session:
         booking = await session.get(Booking, booking_id)
         if not booking or booking.telegram_id != message.from_user.id:
-            await message.answer("Запись не найдена.")
+            await _finish_screen("Запись не найдена.", lead_done_kb())
             return
         old_slot = booking.slot_start if booking.slot_start.tzinfo else booking.slot_start.replace(tzinfo=timezone.utc)
         booking.reschedule_to = new_slot
         booking.reschedule_reason = reason
         booking.reschedule_status = "pending"
         await session.commit()
-    await message.answer(
+    await _finish_screen(
         "○─── ☾ ───○\n\n"
         "🤍 Запрос на перенос отправлен Лане. Как решится — пришлём сообщение.",
-        reply_markup=lead_done_kb(),
+        lead_done_kb(),
     )
     await _notify_admins(
         bot, admin_ids,

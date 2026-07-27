@@ -76,6 +76,50 @@ async def test_reschedule_near_requires_reason_and_pends(env):
 
 
 @pytest.mark.asyncio
+async def test_reschedule_reason_edits_anchor_and_deletes_user_text(env):
+    dp, bot, gcal, session = env
+    # бронь через 2 часа (<24ч), заводим перенос
+    slot = datetime.now(timezone.utc) + timedelta(hours=2)
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    from slots import free_slots
+    import booking_config
+    cfg = booking_config.load()
+    free = free_slots(datetime.now(timezone.utc), [], [], work_times=cfg.work_times,
+                      work_weekdays=cfg.work_weekdays, horizon_days=cfg.horizon_days,
+                      lead=cfg.lead, tz=cfg.tz)
+    new_slot = next(s for s in free if s - datetime.now(timezone.utc) >= timedelta(days=1))
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=eid)
+        s.add(b); await s.commit(); bid = b.id
+    # входим в поток: resched → day → slot (доводим до запроса причины)
+    await press(dp, bot, f"resched:{bid}")
+    await press(dp, bot, find_cb(session, "resched_day:"))
+    await press(dp, bot, find_cb(session, "resched_slot:"))
+    # шлём причину текстом
+    from aiogram.types import Update, Message, Chat, User as TgUser
+    before_sends = sum(1 for n, d in session.log
+                       if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
+    upd = Update(update_id=99, message=Message(
+        message_id=4242, date=datetime.now(),
+        chat=Chat(id=CLIENT_ID, type="private"),
+        from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
+        text="заболел ребёнок"))
+    await dp.feed_update(bot, upd)
+    after_sends = sum(1 for n, d in session.log
+                      if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
+    # клиенту НЕ ушло новое сообщение (отредактирован якорь)
+    assert after_sends == before_sends
+    # текст клиента удалён
+    assert any(n == "DeleteMessage" and d.get("message_id") == 4242
+               for n, d in session.log)
+    # запрос всё равно создан
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status == "pending"
+
+
+@pytest.mark.asyncio
 async def test_apply_reschedule_no_event_just_moves_slot(env):
     # pay_claimed без google_event_id: apply_reschedule не должна трогать
     # календарь, только двигает slot_start и возвращает True (sync_ok)
