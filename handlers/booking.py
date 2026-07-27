@@ -12,7 +12,7 @@ from formatting import PRICE_TEXT, format_slot_human
 from google_calendar import GoogleCalendar
 from keyboards.inline import (
     admin_confirm_pay_kb,
-    booking_days_kb,
+    booking_calendar_kb,
     booking_error_kb,
     booking_pay_kb,
     booking_times_kb,
@@ -22,6 +22,43 @@ from slots import free_slots
 router = Router()
 logger = logging.getLogger(__name__)
 _WEEKDAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+
+_CALENDAR_TEXT = (
+    "○─── ☾ ───○\n\n"
+    "<b>✦ Запись на консультацию</b>\n\n"
+    "Дни со свободным временем — активные кнопки. "
+    "Время — Прага (в скобках московское).\n\n"
+    "Выбери день ⇩"
+)
+
+
+def _month_index(year: int, month: int) -> int:
+    return year * 12 + (month - 1)
+
+
+async def _render_calendar(
+    message, year: int, month: int, slots: list[datetime], cfg: BookingConfig
+) -> None:
+    """Рисует сетку месяца по свободным слотам (aware-UTC список slots)."""
+    tz = cfg.tz
+    now = datetime.now(timezone.utc)
+    now_d = now.astimezone(tz).date()
+    horizon_d = (now + timedelta(days=cfg.horizon_days)).astimezone(tz).date()
+    min_mi = _month_index(now_d.year, now_d.month)
+    max_mi = _month_index(horizon_d.year, horizon_d.month)
+    cur_mi = _month_index(year, month)
+
+    free_dates = {
+        d for s in slots
+        if (d := s.astimezone(tz).date()).year == year and d.month == month
+    }
+    await message.edit_text(
+        _CALENDAR_TEXT,
+        reply_markup=booking_calendar_kb(
+            year, month, free_dates,
+            has_prev=cur_mi > min_mi, has_next=cur_mi < max_mi,
+        ),
+    )
 
 
 async def _active_holds(session, now: datetime) -> list[datetime]:
@@ -80,18 +117,39 @@ async def cb_booking_start(
             reply_markup=booking_error_kb(),
         )
         return
-    days = sorted({s.astimezone(booking_config.tz).date() for s in slots})
-    day_buttons = [
-        (f"{_WEEKDAYS_RU[d.weekday()]} {d.strftime('%d.%m')}", d.isoformat())
-        for d in days
-    ]
-    await callback.message.edit_text(
-        "○─── ☾ ───○\n\n"
-        "<b>✦ Запись на консультацию</b>\n\n"
-        "Сессии проходят по будням, время — Прага (в скобках московское).\n\n"
-        "Выбери удобный день ⇩",
-        reply_markup=booking_days_kb(day_buttons),
-    )
+    # открываем на месяце ближайшего свободного слота
+    first = slots[0].astimezone(booking_config.tz).date()
+    await _render_calendar(callback.message, first.year, first.month, slots, booking_config)
+
+
+@router.callback_query(F.data.startswith("book_month:"))
+async def cb_book_month(
+    callback: CallbackQuery, gcal: GoogleCalendar, booking_config: BookingConfig
+) -> None:
+    try:
+        year_s, month_s = callback.data.split(":", 1)[1].split("-")
+        year, month = int(year_s), int(month_s)
+        if not 1 <= month <= 12:
+            raise ValueError
+    except ValueError:
+        await callback.answer("Не понял месяц", show_alert=True)
+        return
+    try:
+        slots = await _load_free(gcal, booking_config)
+    except Exception:
+        logger.exception("Google недоступен при навигации календаря")
+        await callback.message.edit_text(
+            "Расписание сейчас недоступно 🤍 Попробуй ещё раз.",
+            reply_markup=booking_error_kb(),
+        )
+        return
+    await _render_calendar(callback.message, year, month, slots, booking_config)
+
+
+@router.callback_query(F.data == "noop")
+async def cb_noop(callback: CallbackQuery) -> None:
+    # неактивная ячейка календаря — просто гасим «часики» (это делает middleware)
+    return
 
 
 @router.callback_query(F.data.startswith("book_day:"))

@@ -18,6 +18,21 @@ from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
 load_dotenv()
 
 
+def resolve_admin_ids(admin_ids_raw: str, owner_raw: str | None = "") -> list[int]:
+    """ADMIN_IDS (через запятую) + OWNER_CHAT_ID (личка эксперта, всегда админ).
+
+    OWNER_CHAT_ID добавляется к списку админов независимо от ADMIN_IDS — так
+    уведомления о записи/оплате и кнопки подтверждения доходят до Ланы в личку,
+    даже если ADMIN_IDS настроен на кого-то ещё."""
+    ids = [int(x) for x in admin_ids_raw.replace(" ", "").split(",") if x]
+    owner = (owner_raw or "").strip()
+    if owner:
+        owner_id = int(owner)
+        if owner_id not in ids:
+            ids.append(owner_id)
+    return ids
+
+
 async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -26,11 +41,12 @@ async def main() -> None:
     )
 
     bot_token = os.environ["BOT_TOKEN"]
-    # ADMIN_IDS=123,456 (через запятую); ADMIN_ID поддерживается для совместимости
+    # ADMIN_IDS=123,456 (через запятую); ADMIN_ID поддерживается для совместимости.
+    # OWNER_CHAT_ID — личка эксперта, всегда попадает в админы (см. resolve_admin_ids).
     admin_ids_raw = os.environ.get("ADMIN_IDS") or os.environ.get("ADMIN_ID", "")
-    admin_ids = [int(x) for x in admin_ids_raw.replace(" ", "").split(",") if x]
+    admin_ids = resolve_admin_ids(admin_ids_raw, os.environ.get("OWNER_CHAT_ID", ""))
     if not admin_ids:
-        raise RuntimeError("Set ADMIN_IDS env var (comma-separated telegram ids)")
+        raise RuntimeError("Set ADMIN_IDS or OWNER_CHAT_ID env var (telegram ids)")
     database_url = os.environ["DATABASE_URL"]
 
     import booking_config
