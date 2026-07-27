@@ -288,3 +288,42 @@ async def test_quiz_answer_without_state_gives_hint(env):
     await press(dp, bot, "quiz_ans:3")
     texts = [d.get("text", "") for n, d in session.log if d.get("chat_id") == CLIENT_ID]
     assert any("заново" in t.lower() or "сброш" in t.lower() for t in texts)
+
+
+@pytest.mark.asyncio
+async def test_booking_start_renders_calendar(env):
+    dp, bot, gcal, session = env
+    await press(dp, bot, "booking_start")
+    kb = last_kb(session)
+    cbs = [b.get("callback_data", "") for row in kb for b in row]
+    # календарь: есть шапка-навигация (noop-заголовок) и хотя бы один свободный день
+    assert "noop" in cbs
+    assert any(c.startswith("book_day:") for c in cbs)
+
+
+@pytest.mark.asyncio
+async def test_calendar_month_navigation(env):
+    dp, bot, gcal, session = env
+    await press(dp, bot, "booking_start")
+    nav = find_cb(session, "book_month:")
+    if nav is None:
+        pytest.skip("горизонт уместился в один месяц — навигации нет")
+    await press(dp, bot, nav)
+    kb = last_kb(session)
+    cbs = [b.get("callback_data", "") for row in kb for b in row]
+    # после навигации всё ещё календарь (шапка на месте)
+    assert "noop" in cbs
+
+
+@pytest.mark.asyncio
+async def test_noop_does_not_crash(env):
+    dp, bot, gcal, session = env
+    await press(dp, bot, "booking_start")
+    before = len(session.log)
+    await press(dp, bot, "noop")  # тап по неактивной ячейке
+    # не упало и не отправило клиенту нового сообщения
+    new_client_msgs = [
+        d for n, d in session.log[before:]
+        if n in ("SendMessage", "EditMessageText") and d.get("chat_id") == CLIENT_ID
+    ]
+    assert new_client_msgs == []

@@ -1,3 +1,6 @@
+import calendar as _calendar
+from datetime import date as _date
+
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 # ── Внешние ссылки ───────────────────────────────────────────────────
@@ -44,13 +47,57 @@ def consultation_kb():
 
 
 # ── Запись на слот (календарь) ───────────────────────────────────────
-def booking_days_kb(days: "list[tuple[str, str]]"):
-    """days — список (подпись «Пн 27.07», iso-дата)."""
+_WEEKDAY_HEADER = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+_MONTHS_RU = [
+    "", "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+]
+
+
+def _prev_ym(year: int, month: int) -> str:
+    return f"{year}-{month - 1:02d}" if month > 1 else f"{year - 1}-12"
+
+
+def _next_ym(year: int, month: int) -> str:
+    return f"{year}-{month + 1:02d}" if month < 12 else f"{year + 1}-01"
+
+
+def booking_calendar_kb(
+    year: int, month: int, free_dates: "set[_date]", has_prev: bool, has_next: bool
+):
+    """Сетка месяца Пн–Вс. free_dates — дни этого месяца со свободными слотами
+    (кнопки book_day:<iso>); остальные ячейки неактивны (callback noop)."""
     builder = InlineKeyboardBuilder()
-    for label, iso in days:
-        builder.button(text=label, callback_data=f"book_day:{iso}")
+
+    # строка навигации: ‹  Месяц Год  ›
+    builder.button(
+        text="‹" if has_prev else " ",
+        callback_data=f"book_month:{_prev_ym(year, month)}" if has_prev else "noop",
+    )
+    builder.button(text=f"{_MONTHS_RU[month]} {year}", callback_data="noop")
+    builder.button(
+        text="›" if has_next else " ",
+        callback_data=f"book_month:{_next_ym(year, month)}" if has_next else "noop",
+    )
+
+    # шапка дней недели
+    for wd in _WEEKDAY_HEADER:
+        builder.button(text=wd, callback_data="noop")
+
+    # дни месяца по неделям
+    weeks = _calendar.Calendar(firstweekday=0).monthdatescalendar(year, month)
+    for week in weeks:
+        for d in week:
+            if d.month != month:
+                builder.button(text="·", callback_data="noop")
+            elif d in free_dates:
+                builder.button(text=str(d.day), callback_data=f"book_day:{d.isoformat()}")
+            else:
+                builder.button(text="·", callback_data="noop")
+
     builder.button(text="⇦ Назад", callback_data="consultation")
-    builder.adjust(2)
+    # раскладка: nav(3) · шапка(7) · по 7 на неделю · назад(1)
+    builder.adjust(3, 7, *([7] * len(weeks)), 1)
     return builder.as_markup()
 
 
