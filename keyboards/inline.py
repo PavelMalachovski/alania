@@ -15,10 +15,10 @@ GUIDE_URL = "https://t.me/c/2260920571/433"
 def main_menu_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="О личной работе", callback_data="personal_work")
-    builder.button(text="Про игру VECHNOST", callback_data="game")
-    builder.button(text="Войти в бесплатный Telegram-канал", url=CHANNEL_URL)
+    builder.button(text="Игра VECHNOST", callback_data="game")
+    builder.button(text="Бесплатный Telegram-канал", url=CHANNEL_URL)
     builder.button(
-        text="✦ Тест «Кто управляет твоей жизнью?»",
+        text="Тест «Кто управляет твоей жизнью?»",
         callback_data="quiz_intro",
     )
     builder.button(text="Мои записи", callback_data="my_bookings")
@@ -27,22 +27,14 @@ def main_menu_kb():
 
 
 def personal_work_kb():
+    """Экран «О личной работе» (бывшая консультация без прослойки «Точка сборки»)."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="Личная консультация «Точка сборки»", callback_data="consultation")
-    builder.button(text="⇦ Назад", callback_data="start_menu")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def consultation_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Кому подойдет?", callback_data="consultation_who")
+    builder.button(text="Кому подойдёт?", callback_data="consultation_who")
     builder.button(text="Как проходит сессия?", callback_data="consultation_how")
     builder.button(text="Отзывы", callback_data="consultation_reviews")
     builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Оставить заявку", callback_data="lead_start:consultation")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data="personal_work")
+    builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -162,7 +154,6 @@ def my_bookings_kb(items: "list[tuple[str, int]]"):
 def followup_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Оставить заявку", callback_data="lead_start:consultation")
     builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ В главное меню", callback_data="start_menu")
     builder.adjust(1)

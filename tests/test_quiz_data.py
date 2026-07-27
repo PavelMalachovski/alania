@@ -43,4 +43,4 @@ def test_result_full_range_covered():
 
 
 def test_intro_present():
-    assert "Анатомия свободы" in q.INTRO_TEXT
+    assert "автономию, сценарии мышления" in q.INTRO_TEXT

@@ -3,7 +3,6 @@ from aiogram.types import CallbackQuery
 
 from formatting import PRICE_TEXT
 from keyboards.inline import (
-    consultation_kb,
     consultation_how_kb,
     consultation_sub_kb,
     personal_work_kb,
@@ -14,26 +13,19 @@ router = Router()
 
 PERSONAL_WORK_TEXT = (
     "○─── ☾ ───○\n\n"
-    "В личной работе я использую интегративный подход, работая сразу на нескольких "
-    "уровнях: психология, коучинг и духовность.\n"
-    "⇨ Это позволяет достигать фундаментальных изменений и менять не только состояние, "
-    "но и саму логику выбора, которая в дальнейшем меняет результат и приводит "
-    "к релевантному и желаемому опыту.\n\n"
-    "Выбери подходящий тебе формат ⇩"
-)
-
-CONSULTATION_TEXT = (
-    "○─── ☾ ───○\n\n"
-    "<b>★ Личная консультация «Точка сборки»</b>\n\n"
-    "Это глубокое погружение через соединение нескольких форматов.\n\n"
-    "Я работаю в интегративном подходе, используя сразу несколько инструментов: "
-    "психология, коучинг, духовность.\n\n"
+    "<b>✦ О личной работе</b>\n\n"
+    "<b>Индивидуальная терапия и консультации</b> 🗝️\n\n"
+    "Я работаю в интегративном подходе (психосоматика, телесная терапия, коучинг "
+    "и глубокая психология). Это помогает убрать слепые зоны на уровне психики "
+    "и тела, чтобы перестроить действия и логику выбора.\n\n"
+    "<b>С какими запросами я работаю:</b>\n"
+    "● отношения с собой: тревога, вина, самооценка, поиск себя, проявленность\n"
+    "● отношения с другими: границы, сепарация, кризисы в отношениях, разрывы\n"
+    "● реализация: деньги, выгорание, тупик в карьере, смена вектора жизни\n\n"
+    "<b>Как проходит консультация?</b>\n"
     "● Длительность: 70 минут\n"
     "● Формат: онлайн (видеозвонок)\n"
-    f"● Стоимость: {PRICE_TEXT}\n\n"
-    "Во время встречи мы можем разобрать один или несколько запросов. "
-    "Ты получишь конкретные рекомендации, практики и методы, которые дадут "
-    "новый результат в жизни."
+    f"● Стоимость: {PRICE_TEXT}"
 )
 
 CONSULTATION_WHO_TEXT = (
@@ -113,14 +105,11 @@ REVIEWS = [
 ]
 
 
-@router.callback_query(F.data == "personal_work")
+# «consultation» оставлен алиасом: на него ведут кнопки «Назад» из под-экранов
+# (кому подойдёт / как проходит / отзывы) и календаря записи.
+@router.callback_query(F.data.in_({"personal_work", "consultation"}))
 async def cb_personal_work(callback: CallbackQuery) -> None:
     await callback.message.edit_text(PERSONAL_WORK_TEXT, reply_markup=personal_work_kb())
-
-
-@router.callback_query(F.data == "consultation")
-async def cb_consultation(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(CONSULTATION_TEXT, reply_markup=consultation_kb())
 
 
 @router.callback_query(F.data == "consultation_who")
