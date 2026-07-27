@@ -98,3 +98,57 @@ async def test_apply_reschedule_no_event_just_moves_slot(env):
         b = await s.get(Booking, bid)
     stored = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
     assert stored == new_slot
+
+
+async def _pending_near(env):
+    dp, bot, gcal, session = env
+    import booking_config
+    from slots import free_slots
+    cfg = booking_config.load()
+    now = datetime.now(timezone.utc)
+    slot = now + timedelta(hours=2)          # исходная сессия <24ч
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    # reschedule_to должен быть РЕАЛЬНЫМ слотом по сетке (free_slots отдаёт только
+    # сеточные времена), иначе approve-хендлер честно сочтёт его занятым.
+    free = free_slots(now, [], [], work_times=cfg.work_times,
+                      work_weekdays=cfg.work_weekdays, horizon_days=cfg.horizon_days,
+                      lead=cfg.lead, tz=cfg.tz)
+    new_slot = next(s for s in free if s - now >= timedelta(days=1))
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=eid, reschedule_to=new_slot,
+                    reschedule_reason="повод", reschedule_status="pending")
+        s.add(b)
+        await s.commit()
+        bid = b.id
+    return bid, eid, new_slot
+
+
+@pytest.mark.asyncio
+async def test_admin_approve_moves_booking(env):
+    dp, bot, gcal, session = env
+    bid, old_eid, new_slot = await _pending_near(env)
+    from aiogram.types import User as TgUser
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_ok:{bid}", user=admin, chat_id=ADMIN_ID)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status is None
+    assert b.slot_start.replace(tzinfo=timezone.utc) == new_slot
+    assert old_eid in gcal.deleted            # старое событие удалено
+    assert b.google_event_id in gcal.events   # новое создано
+
+
+@pytest.mark.asyncio
+async def test_admin_reject_cancels_without_refund(env):
+    dp, bot, gcal, session = env
+    bid, old_eid, _ = await _pending_near(env)
+    from aiogram.types import User as TgUser
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_no:{bid}", user=admin, chat_id=ADMIN_ID)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.status == "cancelled"
+    assert old_eid in gcal.deleted
+    client_texts = [d.get("text", "") for n, d in session.log if d.get("chat_id") == CLIENT_ID]
+    assert any("не возвращается" in t for t in client_texts)

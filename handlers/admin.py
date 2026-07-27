@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramAPIError, TelegramRetryAfter
@@ -10,12 +10,14 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
+from booking_config import BookingConfig
 from database import Booking, User, get_session, set_setting
 from filters import IsAdmin
 from formatting import format_slot_human
 from google_calendar import GoogleCalendar
-from handlers.booking import build_event_fields
+from handlers.booking import apply_reschedule, build_event_fields, _occupied_slots
 from keyboards.inline import broadcast_confirm_kb, lead_done_kb
+from slots import free_slots
 
 router = Router()
 router.message.filter(IsAdmin())
@@ -180,6 +182,101 @@ async def cb_reject_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
     await callback.message.edit_text(
         callback.message.html_text + "\n\n❌ <b>Оплата отклонена, слот освобождён</b>"
     )
+
+
+@router.callback_query(F.data.startswith("resched_ok:"))
+async def cb_resched_ok(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar,
+                        booking_config: BookingConfig) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        return
+    now = datetime.now(timezone.utc)
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.reschedule_status != "pending":
+            await callback.answer("Запрос уже обработан", show_alert=True)
+            return
+        new_slot = booking.reschedule_to
+        if new_slot.tzinfo is None:
+            new_slot = new_slot.replace(tzinfo=timezone.utc)
+        # новый слот всё ещё свободен?
+        busy = await gcal.busy(now, now + timedelta(days=booking_config.horizon_days))
+        occupied = await _occupied_slots(session, now)
+        free = free_slots(now, busy, occupied,
+                          work_times=booking_config.work_times,
+                          work_weekdays=booking_config.work_weekdays,
+                          horizon_days=booking_config.horizon_days,
+                          lead=booking_config.lead, tz=booking_config.tz)
+        if new_slot not in free:
+            booking.reschedule_status = None
+            booking.reschedule_to = None
+            booking.reschedule_reason = None
+            await session.commit()
+            user_id = booking.telegram_id
+            await callback.answer("Новый слот уже занят — перенос отменён", show_alert=True)
+            await callback.message.edit_text(
+                callback.message.html_text + "\n\n⚠️ <b>Новый слот занят, перенос не выполнен</b>")
+            try:
+                await bot.send_message(
+                    user_id,
+                    "К сожалению, выбранное для переноса время уже заняли. "
+                    "Запись осталась на прежнем слоте 🤍")
+            except TelegramAPIError:
+                pass
+            return
+        await apply_reschedule(gcal, session, booking, new_slot)
+        booking.reschedule_status = None
+        booking.reschedule_to = None
+        booking.reschedule_reason = None
+        await session.commit()
+        user_id, moved = booking.telegram_id, new_slot
+    try:
+        await bot.send_message(
+            user_id,
+            "○─── ☾ ───○\n\n"
+            f"✦ Перенос подтверждён: <b>{format_slot_human(moved)}</b> 🤍",
+            reply_markup=lead_done_kb())
+    except TelegramAPIError:
+        pass
+    await callback.message.edit_text(
+        callback.message.html_text + "\n\n✅ <b>Перенос подтверждён</b>")
+
+
+@router.callback_query(F.data.startswith("resched_no:"))
+async def cb_resched_no(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar) -> None:
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        return
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.reschedule_status != "pending":
+            await callback.answer("Запрос уже обработан", show_alert=True)
+            return
+        event_id = booking.google_event_id
+        booking.status = "cancelled"
+        booking.reschedule_status = None
+        booking.reschedule_to = None
+        booking.reschedule_reason = None
+        await session.commit()
+        user_id = booking.telegram_id
+    if event_id:
+        try:
+            await gcal.delete_event(event_id)
+        except Exception:
+            logger.exception("Не удалось удалить событие при отклонении переноса")
+    try:
+        await bot.send_message(
+            user_id,
+            "○─── ☾ ───○\n\n"
+            "Перенос отклонён. К сожалению, запись отменена, "
+            "оплата не возвращается 🤍",
+            reply_markup=lead_done_kb())
+    except TelegramAPIError:
+        pass
+    await callback.message.edit_text(
+        callback.message.html_text + "\n\n❌ <b>Перенос отклонён, запись отменена</b>")
 
 
 @router.message(Command("bookings"))
