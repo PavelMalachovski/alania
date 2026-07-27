@@ -16,6 +16,7 @@ from keyboards.inline import (
     booking_error_kb,
     booking_pay_kb,
     booking_times_kb,
+    my_bookings_kb,
 )
 from slots import free_slots
 
@@ -309,4 +310,32 @@ async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> No
         f"{_client_line(callback)}\n\n"
         "Проверь оплату в Tribute и подтверди ⇩",
         reply_markup=admin_confirm_pay_kb(booking_id),
+    )
+
+
+@router.callback_query(F.data == "my_bookings")
+async def cb_my_bookings(callback: CallbackQuery) -> None:
+    now = datetime.now(timezone.utc)
+    async with get_session() as session:
+        rows = (await session.execute(
+            select(Booking).where(
+                Booking.telegram_id == callback.from_user.id,
+                Booking.status.in_(["pay_claimed", "confirmed"]),
+                Booking.slot_start >= now,
+            ).order_by(Booking.slot_start)
+        )).scalars().all()
+    if not rows:
+        await callback.message.edit_text(
+            "○─── ☾ ───○\n\n"
+            "У тебя пока нет активных записей 🤍",
+            reply_markup=my_bookings_kb([]),
+        )
+        return
+    items = []
+    for b in rows:
+        slot = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
+        items.append((format_slot_human(slot), b.id))
+    await callback.message.edit_text(
+        "○─── ☾ ───○\n\n<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩",
+        reply_markup=my_bookings_kb(items),
     )

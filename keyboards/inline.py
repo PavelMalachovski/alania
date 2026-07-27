@@ -21,6 +21,7 @@ def main_menu_kb():
         text="✦ Тест «Кто управляет твоей жизнью?»",
         callback_data="quiz_intro",
     )
+    builder.button(text="Мои записи", callback_data="my_bookings")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -136,6 +137,16 @@ def admin_confirm_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="✅ Подтвердить оплату", callback_data=f"confirm_pay:{booking_id}")
     builder.button(text="❌ Оплата не найдена", callback_data=f"reject_pay:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def my_bookings_kb(items: "list[tuple[str, int]]"):
+    """items — (подпись слота, booking_id)."""
+    builder = InlineKeyboardBuilder()
+    for label, bid in items:
+        builder.button(text=f"Перенести · {label}", callback_data=f"resched:{bid}")
+    builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 

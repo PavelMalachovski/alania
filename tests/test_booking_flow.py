@@ -460,3 +460,20 @@ async def test_sixth_active_booking_blocked(env):
     async with get_session() as s:
         held = (await s.execute(select(func.count()).select_from(Booking).where(Booking.status == "held"))).scalar()
     assert held == 0
+
+
+@pytest.mark.asyncio
+async def test_my_bookings_lists_future_paid(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    async with get_session() as s:
+        s.add(Booking(telegram_id=CLIENT_ID,
+                      slot_start=datetime.now(timezone.utc) + timedelta(days=3),
+                      status="confirmed"))
+        s.add(Booking(telegram_id=CLIENT_ID,
+                      slot_start=datetime.now(timezone.utc) - timedelta(days=3),
+                      status="confirmed"))  # прошлая — не показывать
+        await s.commit()
+    await press(dp, bot, "my_bookings")
+    cbs = [b.get("callback_data", "") for row in last_kb(session) for b in row]
+    assert sum(c.startswith("resched:") for c in cbs) == 1
