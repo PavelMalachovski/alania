@@ -1,6 +1,5 @@
 import pytest
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
 
 from database import Booking, get_session
 from tests.test_booking_flow import (  # переиспользуем харнес
@@ -74,3 +73,28 @@ async def test_reschedule_near_requires_reason_and_pends(env):
     admin_cbs = [x.get("callback_data", "") for row in last_kb(session, chat_id=ADMIN_ID) for x in row]
     assert any(c.startswith("resched_ok:") for c in admin_cbs)
     assert any(c.startswith("resched_no:") for c in admin_cbs)
+
+
+@pytest.mark.asyncio
+async def test_apply_reschedule_no_event_just_moves_slot(env):
+    # pay_claimed без google_event_id: apply_reschedule не должна трогать
+    # календарь, только двигает slot_start и возвращает True (sync_ok)
+    dp, bot, gcal, session = env
+    from handlers.booking import apply_reschedule
+    old_slot = datetime.now(timezone.utc) + timedelta(days=3)
+    new_slot = datetime.now(timezone.utc) + timedelta(days=6)
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=old_slot,
+                    status="pay_claimed", google_event_id=None)
+        s.add(b)
+        await s.commit()
+        ok = await apply_reschedule(gcal, s, b, new_slot)
+        await s.commit()
+        bid = b.id
+    assert ok is True
+    assert gcal.events == {}
+    assert gcal.deleted == []
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    stored = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
+    assert stored == new_slot

@@ -365,6 +365,7 @@ async def apply_reschedule(gcal, session, booking, new_slot: datetime) -> bool:
             await gcal.delete_event(booking.google_event_id)
         except Exception:
             logger.exception("Не удалось удалить старое событие при переносе")
+            booking.calendar_sync_failed = True
         try:
             title, desc = await build_event_fields(session, booking.telegram_id)
             booking.google_event_id = await gcal.create_event(new_slot, title, desc)
@@ -397,12 +398,14 @@ async def cb_resched_start(callback: CallbackQuery, state: FSMContext,
         slots = await _load_free(gcal, booking_config)
     except Exception:
         logger.exception("Google недоступен при старте переноса")
+        await state.clear()
         await callback.message.edit_text(
             "Расписание сейчас недоступно 🤍 Попробуй ещё раз.",
             reply_markup=booking_error_kb(),
         )
         return
     if not slots:
+        await state.clear()
         await callback.answer("Свободного времени сейчас нет", show_alert=True)
         return
     first = slots[0].astimezone(booking_config.tz).date()

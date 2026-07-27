@@ -77,6 +77,14 @@ async def env(_dp):
     _dp["admin_ids"] = [ADMIN_ID]
     _dp["booking_config"] = cfg
     _dp["gcal"] = gcal
+    # _dp — session-scoped, его MemoryStorage переживает между тестами. FSM-флоу
+    # (перенос) может оставить состояние в picking/reason со stale data — чистим
+    # хранилище для тестовых ключей ПЕРЕД каждым тестом, чтобы старт был с нуля.
+    from aiogram.fsm.storage.base import StorageKey
+    for uid in (CLIENT_ID, ADMIN_ID):
+        key = StorageKey(bot_id=bot.id, chat_id=uid, user_id=uid)
+        await _dp.storage.set_state(key, None)
+        await _dp.storage.set_data(key, {})
     yield _dp, bot, gcal, session
     await close_db()
     database.engine = None
