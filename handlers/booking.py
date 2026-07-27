@@ -44,7 +44,7 @@ def _month_index(year: int, month: int) -> int:
 
 async def _render_calendar(
     message, year: int, month: int, slots: list[datetime], cfg: BookingConfig,
-    *, prefix: str = "book", back_cb: str = "consultation",
+    *, prefix: str = "book", back_cb: str = "consultation", send: bool = False,
 ) -> None:
     """Рисует сетку месяца по свободным слотам (aware-UTC список slots)."""
     tz = cfg.tz
@@ -59,14 +59,15 @@ async def _render_calendar(
         d for s in slots
         if (d := s.astimezone(tz).date()).year == year and d.month == month
     }
-    await message.edit_text(
-        _CALENDAR_TEXT,
-        reply_markup=booking_calendar_kb(
-            year, month, free_dates,
-            has_prev=cur_mi > min_mi, has_next=cur_mi < max_mi,
-            prefix=prefix, back_cb=back_cb,
-        ),
+    kb = booking_calendar_kb(
+        year, month, free_dates,
+        has_prev=cur_mi > min_mi, has_next=cur_mi < max_mi,
+        prefix=prefix, back_cb=back_cb,
     )
+    if send:
+        await message.answer(_CALENDAR_TEXT, reply_markup=kb)
+    else:
+        await message.edit_text(_CALENDAR_TEXT, reply_markup=kb)
 
 
 MAX_ACTIVE_BOOKINGS = 5
@@ -112,32 +113,39 @@ async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]
     )
 
 
+async def open_calendar(message, gcal: GoogleCalendar, cfg: BookingConfig, *, send: bool) -> None:
+    """Показать календарь записи. send=True — новым сообщением, иначе редактируя message."""
+    try:
+        slots = await _load_free(gcal, cfg)
+    except Exception:
+        logger.exception("Google Calendar недоступен при показе слотов")
+        text = (
+            "○─── ☾ ───○\n\n"
+            "Расписание сейчас недоступно 🤍 Попробуй через минуту "
+            "или напиши Лане в личку — подберём время вручную."
+        )
+        await (message.answer(text, reply_markup=booking_error_kb()) if send
+               else message.edit_text(text, reply_markup=booking_error_kb()))
+        return
+    if not slots:
+        text = (
+            "○─── ☾ ───○\n\n"
+            "Ближайшее время сейчас занято 🤍 Напиши Лане в ЛС — "
+            "подберём время индивидуально."
+        )
+        await (message.answer(text, reply_markup=booking_error_kb()) if send
+               else message.edit_text(text, reply_markup=booking_error_kb()))
+        return
+    # открываем на месяце ближайшего свободного слота
+    first = slots[0].astimezone(cfg.tz).date()
+    await _render_calendar(message, first.year, first.month, slots, cfg, send=send)
+
+
 @router.callback_query(F.data.in_({"booking_start", "consultation_pay"}))
 async def cb_booking_start(
     callback: CallbackQuery, gcal: GoogleCalendar, booking_config: BookingConfig
 ) -> None:
-    try:
-        slots = await _load_free(gcal, booking_config)
-    except Exception:
-        logger.exception("Google Calendar недоступен при показе слотов")
-        await callback.message.edit_text(
-            "○─── ☾ ───○\n\n"
-            "Расписание сейчас недоступно 🤍 Попробуй через минуту "
-            "или напиши Лане в личку — подберём время вручную.",
-            reply_markup=booking_error_kb(),
-        )
-        return
-    if not slots:
-        await callback.message.edit_text(
-            "○─── ☾ ───○\n\n"
-            "Ближайшее время сейчас занято 🤍 Напиши Лане в ЛС — "
-            "подберём время индивидуально.",
-            reply_markup=booking_error_kb(),
-        )
-        return
-    # открываем на месяце ближайшего свободного слота
-    first = slots[0].astimezone(booking_config.tz).date()
-    await _render_calendar(callback.message, first.year, first.month, slots, booking_config)
+    await open_calendar(callback.message, gcal, booking_config, send=False)
 
 
 @router.callback_query(F.data.startswith("book_month:"))
@@ -324,32 +332,33 @@ async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> No
     )
 
 
-@router.callback_query(F.data == "my_bookings")
-async def cb_my_bookings(callback: CallbackQuery) -> None:
+async def open_my_bookings(message, tg_id: int, *, send: bool) -> None:
     now = datetime.now(timezone.utc)
     async with get_session() as session:
         rows = (await session.execute(
             select(Booking).where(
-                Booking.telegram_id == callback.from_user.id,
+                Booking.telegram_id == tg_id,
                 Booking.status.in_(["pay_claimed", "confirmed"]),
                 Booking.slot_start >= now,
             ).order_by(Booking.slot_start)
         )).scalars().all()
     if not rows:
-        await callback.message.edit_text(
-            "○─── ☾ ───○\n\n"
-            "У тебя пока нет активных записей 🤍",
-            reply_markup=my_bookings_kb([]),
-        )
-        return
-    items = []
-    for b in rows:
-        slot = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
-        items.append((format_slot_human(slot), b.id))
-    await callback.message.edit_text(
-        "○─── ☾ ───○\n\n<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩",
-        reply_markup=my_bookings_kb(items),
-    )
+        text = "○─── ☾ ───○\n\nУ тебя пока нет активных записей 🤍"
+        kb = my_bookings_kb([])
+    else:
+        items = []
+        for b in rows:
+            slot = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
+            items.append((format_slot_human(slot), b.id))
+        text = "○─── ☾ ───○\n\n<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩"
+        kb = my_bookings_kb(items)
+    await (message.answer(text, reply_markup=kb) if send
+           else message.edit_text(text, reply_markup=kb))
+
+
+@router.callback_query(F.data == "my_bookings")
+async def cb_my_bookings(callback: CallbackQuery) -> None:
+    await open_my_bookings(callback.message, callback.from_user.id, send=False)
 
 
 RESCHEDULE_THRESHOLD = timedelta(hours=24)
