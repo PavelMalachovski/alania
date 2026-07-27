@@ -273,6 +273,19 @@ async def test_resched_ok_google_down_leaves_pending(env):
 
 
 @pytest.mark.asyncio
+async def test_resched_reject_collapses_admin_notification(env):
+    dp, bot, gcal, session = env
+    bid, old_eid, _ = await _pending_near(env)
+    from aiogram.types import User as TgUser
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_no:{bid}", user=admin, chat_id=ADMIN_ID)
+    edits = [d for n, d in session.log
+             if n == "EditMessageText" and d.get("chat_id") == ADMIN_ID]
+    assert "отклонён" in edits[-1]["text"].lower()
+    assert "Причина:" not in edits[-1]["text"]
+
+
+@pytest.mark.asyncio
 async def test_resched_reason_command_escapes(env):
     """Fix 3: команда (/cancel) вместо причины переноса не сохраняется как
     причина — FSM очищается, pending не выставляется."""
