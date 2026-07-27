@@ -201,7 +201,12 @@ async def cb_resched_ok(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar,
         if new_slot.tzinfo is None:
             new_slot = new_slot.replace(tzinfo=timezone.utc)
         # новый слот всё ещё свободен?
-        busy = await gcal.busy(now, now + timedelta(days=booking_config.horizon_days))
+        try:
+            busy = await gcal.busy(now, now + timedelta(days=booking_config.horizon_days))
+        except Exception:
+            logger.exception("Google недоступен при подтверждении переноса")
+            await callback.answer("Google недоступен, попробуй ещё раз", show_alert=True)
+            return
         occupied = await _occupied_slots(session, now)
         free = free_slots(now, busy, occupied,
                           work_times=booking_config.work_times,

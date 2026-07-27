@@ -73,12 +73,16 @@ MAX_ACTIVE_BOOKINGS = 5
 
 
 async def _occupied_slots(session, now: datetime) -> list[datetime]:
-    """Слоты, занятые до появления события в календаре: held (не истёкшие) и
-    pay_claimed (оплачено, ждёт подтверждения)."""
+    """Слоты, занятые до появления события в календаре: held (не истёкшие),
+    pay_claimed (оплачено, ждёт подтверждения) и confirmed с
+    calendar_sync_failed=True (событие в Google не создалось — слот больше
+    ничем не защищён от double-booking)."""
     rows = (await session.execute(
         select(Booking.slot_start).where(
             ((Booking.status == "held") & (Booking.held_until > now))
             | (Booking.status == "pay_claimed")
+            | ((Booking.status == "confirmed") & (Booking.calendar_sync_failed == True)  # noqa: E712
+               & (Booking.slot_start > now))
         )
     )).scalars()
     return [r if r.tzinfo else r.replace(tzinfo=timezone.utc) for r in rows]
@@ -524,6 +528,12 @@ async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
 @router.message(RescheduleForm.reason, F.text)
 async def resched_reason(message: Message, state: FSMContext, bot: Bot,
                          admin_ids: list[int]) -> None:
+    if message.text.startswith("/"):
+        # команда (/cancel, /start и т.п.) вместо причины — не сохраняем её
+        # как причину переноса, просто выходим из FSM
+        await state.clear()
+        await message.answer("Ок, перенос отменён.")
+        return
     data = await state.get_data()
     booking_id = data.get("resched_booking_id")
     new_slot_iso = data.get("resched_new_slot")

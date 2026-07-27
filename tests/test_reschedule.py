@@ -188,3 +188,78 @@ async def test_approve_when_new_slot_taken_keeps_original(env):
     assert b.status == "confirmed"                      # НЕ отменён
     assert b.slot_start.replace(tzinfo=timezone.utc) != new_slot  # не двинут
     assert old_eid not in gcal.deleted                  # старое событие не удалено
+
+
+@pytest.mark.asyncio
+async def test_occupied_slots_includes_sync_failed_confirmed(env):
+    """Fix 1: confirmed-бронь без события в Google (calendar_sync_failed=True)
+    ничем, кроме _occupied_slots, не защищена от double-booking — слот должен
+    попадать в список занятых."""
+    dp, bot, gcal, session = env
+    now = datetime.now(timezone.utc)
+    slot = now + timedelta(days=3)
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot, status="confirmed",
+                    google_event_id=None, calendar_sync_failed=True)
+        s.add(b)
+        await s.commit()
+    from handlers.booking import _occupied_slots
+    async with get_session() as s:
+        occupied = await _occupied_slots(s, now)
+    assert slot in occupied
+
+
+@pytest.mark.asyncio
+async def test_resched_ok_google_down_leaves_pending(env):
+    """Fix 2: если gcal.busy() падает при подтверждении переноса, Лана видит
+    алерт, а бронь остаётся нетронутой (pending, старый слот, событие)."""
+    dp, bot, gcal, session = env
+    from aiogram.types import User as TgUser
+    bid, old_eid, new_slot = await _pending_near(env)
+    gcal.raise_on_busy = True
+    admin = TgUser(id=ADMIN_ID, is_bot=False, first_name="Lana")
+    await press(dp, bot, f"resched_ok:{bid}", user=admin, chat_id=ADMIN_ID)
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status == "pending"             # не тронуто
+    assert b.status == "confirmed"
+    assert b.slot_start.replace(tzinfo=timezone.utc) != new_slot  # не переехало
+    assert b.google_event_id == old_eid                 # событие не пересоздано
+    assert old_eid not in gcal.deleted
+
+
+@pytest.mark.asyncio
+async def test_resched_reason_command_escapes(env):
+    """Fix 3: команда (/cancel) вместо причины переноса не сохраняется как
+    причина — FSM очищается, pending не выставляется."""
+    dp, bot, gcal, session = env
+    slot = datetime.now(timezone.utc) + timedelta(hours=2)   # <24ч
+    eid = await gcal.create_event(slot, "Клиент", "desc")
+    async with get_session() as s:
+        b = Booking(telegram_id=CLIENT_ID, slot_start=slot,
+                    status="confirmed", google_event_id=eid)
+        s.add(b)
+        await s.commit()
+        bid = b.id
+    await press(dp, bot, f"resched:{bid}")
+    day = find_cb(session, "resched_day:")
+    await press(dp, bot, day)
+    new_slot_cb = find_cb(session, "resched_slot:")
+    await press(dp, bot, new_slot_cb)
+
+    from aiogram.types import Update, Message, Chat, User as TgUser
+    upd = Update(update_id=1001, message=Message(
+        message_id=6, date=datetime.now(),
+        chat=Chat(id=CLIENT_ID, type="private"),
+        from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
+        text="/cancel"))
+    await dp.feed_update(bot, upd)
+
+    async with get_session() as s:
+        b = await s.get(Booking, bid)
+    assert b.reschedule_status is None
+    assert b.reschedule_reason is None
+
+    from aiogram.fsm.storage.base import StorageKey
+    key = StorageKey(bot_id=bot.id, chat_id=CLIENT_ID, user_id=CLIENT_ID)
+    assert await dp.storage.get_state(key) is None
