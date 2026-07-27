@@ -350,6 +350,31 @@ async def test_pay_claimed_slot_stays_occupied(env):
 
 
 @pytest.mark.asyncio
+async def test_fifth_active_booking_allowed(env):
+    dp, bot, gcal, session = env
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy import select, func
+    # 4 активных confirmed в будущем
+    async with get_session() as s:
+        for i in range(4):
+            s.add(Booking(
+                telegram_id=CLIENT_ID,
+                slot_start=datetime.now(timezone.utc) + timedelta(days=2 + i),
+                status="confirmed",
+            ))
+        await s.commit()
+    # 5-я бронь должна пройти (при лимите=1 упала бы)
+    await press(dp, bot, "booking_start")
+    await press(dp, bot, find_cb(session, "book_day:"))
+    await press(dp, bot, find_cb(session, "book_slot:"))
+    async with get_session() as s:
+        held = (await s.execute(
+            select(func.count()).select_from(Booking).where(Booking.status == "held")
+        )).scalar()
+    assert held == 1   # 5-я запись создана как held
+
+
+@pytest.mark.asyncio
 async def test_sixth_active_booking_blocked(env):
     dp, bot, gcal, session = env
     from datetime import datetime, timedelta, timezone
