@@ -9,7 +9,6 @@ PAY_RUB_URL = "https://web.tribute.tg/p/rTr"
 PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
-GUIDE_URL = "https://t.me/c/2260920571/433"
 
 
 def ask_lana_kb():
@@ -21,13 +20,10 @@ def ask_lana_kb():
 
 
 def personal_work_kb():
-    """Экран «О личной работе» (бывшая консультация без прослойки «Точка сборки»)."""
+    """Экран «О личной работе». Запись/вопрос в ЛС — в нижней клавиатуре,
+    поэтому здесь только «Отзывы» + возврат в меню (без дублей нижней панели)."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="Кому подойдёт?", callback_data="consultation_who")
-    builder.button(text="Как проходит сессия?", callback_data="consultation_how")
     builder.button(text="Отзывы", callback_data="consultation_reviews")
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
@@ -154,25 +150,6 @@ def followup_kb():
     return builder.as_markup()
 
 
-def consultation_sub_kb(back_to: str = "consultation"):
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data=back_to)
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def consultation_how_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", callback_data="get_guide")
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data="consultation")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
 def game_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к игре", url=GAME_URL)
@@ -185,22 +162,6 @@ def channel_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Войти в канал", url=CHANNEL_URL)
     builder.button(text="⇦ Назад", callback_data="start_menu")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def gift_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", callback_data="get_guide")
-    builder.button(text="⇦ Назад", callback_data="start_menu")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def guide_link_kb():
-    """Фолбэк, пока админ не загрузил файл гайда через /set_guide."""
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Открыть гайд", url=GUIDE_URL)
     builder.adjust(1)
     return builder.as_markup()
 
@@ -260,14 +221,17 @@ def quiz_intro_kb():
 
 
 def quiz_question_kb(options: "list[tuple[str, int]]", is_first: bool):
-    """options — список (текст варианта, балл) в порядке показа."""
+    """options — список (текст варианта, балл) в порядке показа. Кнопки —
+    короткие номера «1..N» (полный текст вариантов идёт в тексте вопроса,
+    иначе Telegram обрезает длинные подписи inline-кнопок)."""
     builder = InlineKeyboardBuilder()
-    for text, score in options:
-        builder.button(text=text, callback_data=f"quiz_ans:{score}")
+    for i, (_text, score) in enumerate(options, 1):
+        builder.button(text=str(i), callback_data=f"quiz_ans:{score}")
     if not is_first:
         builder.button(text="⇦ Назад", callback_data="quiz_back")
     builder.button(text="✕ Прервать", callback_data="start_menu")
-    builder.adjust(1)
+    # ряд номеров, затем (Назад +) Прервать
+    builder.adjust(len(options), 2 if not is_first else 1)
     return builder.as_markup()
 
 

@@ -15,9 +15,13 @@ class Quiz(StatesGroup):
 
 def _question_text(idx: int) -> str:
     q = QUESTIONS[idx]
+    opts = "\n\n".join(
+        f"<b>{i}.</b> {text}" for i, (text, _score) in enumerate(q["options"], 1)
+    )
     return (
         f"Вопрос {idx + 1}/{len(QUESTIONS)}\n\n"
-        f"{q['text']}"
+        f"{q['text']}\n\n"
+        f"{opts}"
     )
 
 
