@@ -11,7 +11,7 @@ from aiogram.types import CallbackQuery, Message
 from sqlalchemy import select
 
 from booking_config import BookingConfig
-from database import Booking, User, get_session, set_setting
+from database import Booking, User, get_session
 from filters import IsAdmin
 from formatting import format_slot_human
 from google_calendar import GoogleCalendar
@@ -24,13 +24,6 @@ router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
 
 logger = logging.getLogger(__name__)
-
-GUIDE_FILE_KEY = "guide_file_id"
-
-
-class GuideForm(StatesGroup):
-    waiting_file = State()
-
 
 class BroadcastForm(StatesGroup):
     waiting_message = State()
@@ -47,35 +40,10 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
 async def cmd_admin(message: Message) -> None:
     await message.answer(
         "<b>Админ-команды:</b>\n\n"
-        "/set_guide — загрузить файл гайда «Карта твоего запроса»\n"
         "/broadcast — рассылка всем пользователям бота\n"
         "/bookings — ближайшие оплаченные записи\n"
         "/cancel — отменить текущее действие"
     )
-
-
-# ── Гайд ─────────────────────────────────────────────────────────────
-@router.message(Command("set_guide"))
-async def cmd_set_guide(message: Message, state: FSMContext) -> None:
-    await state.set_state(GuideForm.waiting_file)
-    await message.answer(
-        "Пришли файл гайда (PDF) следующим сообщением.\n"
-        "Отмена — /cancel"
-    )
-
-
-@router.message(GuideForm.waiting_file, F.document)
-async def guide_file(message: Message, state: FSMContext) -> None:
-    await set_setting(GUIDE_FILE_KEY, message.document.file_id)
-    await state.clear()
-    await message.answer(
-        "✅ Гайд сохранён. Теперь кнопка «Забрать гайд» отправляет этот файл."
-    )
-
-
-@router.message(GuideForm.waiting_file)
-async def guide_not_file(message: Message) -> None:
-    await message.answer("Нужен именно файл (документ). Отмена — /cancel")
 
 
 # ── Подтверждение / отклонение оплаты слота ──────────────────────────

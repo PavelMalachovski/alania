@@ -9,7 +9,6 @@ PAY_RUB_URL = "https://web.tribute.tg/p/rTr"
 PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
-GUIDE_URL = "https://t.me/c/2260920571/433"
 
 
 def ask_lana_kb():
@@ -151,25 +150,6 @@ def followup_kb():
     return builder.as_markup()
 
 
-def consultation_sub_kb(back_to: str = "consultation"):
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data=back_to)
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def consultation_how_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", callback_data="get_guide")
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
-    builder.button(text="⇦ Назад", callback_data="consultation")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
 def game_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к игре", url=GAME_URL)
@@ -182,22 +162,6 @@ def channel_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Войти в канал", url=CHANNEL_URL)
     builder.button(text="⇦ Назад", callback_data="start_menu")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def gift_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Забрать гайд", callback_data="get_guide")
-    builder.button(text="⇦ Назад", callback_data="start_menu")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
-def guide_link_kb():
-    """Фолбэк, пока админ не загрузил файл гайда через /set_guide."""
-    builder = InlineKeyboardBuilder()
-    builder.button(text="Открыть гайд", url=GUIDE_URL)
     builder.adjust(1)
     return builder.as_markup()
 

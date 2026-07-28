@@ -2,12 +2,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
 from formatting import PRICE_TEXT
-from keyboards.inline import (
-    consultation_how_kb,
-    consultation_sub_kb,
-    personal_work_kb,
-    reviews_kb,
-)
+from keyboards.inline import personal_work_kb, reviews_kb
 
 router = Router()
 
@@ -25,31 +20,6 @@ PERSONAL_WORK_TEXT = (
     "● Длительность: 70 минут\n"
     "● Формат: онлайн (видеозвонок)\n"
     f"● Стоимость: {PRICE_TEXT}"
-)
-
-CONSULTATION_WHO_TEXT = (
-    "<b>★ Кому подойдет?</b>\n\n"
-    "Этот формат для тебя, если ты:\n\n"
-    "● Выгорела и не можешь найти ответы на свои вопросы\n"
-    "● Потерялась и не знаешь, куда дальше двигаться\n"
-    "● Устала прорабатывать одни и те же травмы и повторяющиеся ситуации\n"
-    "● Чувствуешь, что способна на большее, но не понимаешь как его достичь "
-    "и какое твое предназначение\n"
-    "● Знаешь, что нужно делать, но не можешь начать\n"
-    "● Хочешь научиться легкости и получить ясность в жизни"
-)
-
-CONSULTATION_HOW_TEXT = (
-    "<b>☾ Как проходит сессия?</b>\n\n"
-    "● Онлайн через видеосвязь\n"
-    "● Длительность: 70 минут\n\n"
-    "Мы разбираем твой запрос или проблему, находя не только ответы на вопросы, "
-    "но и выстраивая новую стратегию действия.\n\n"
-    "<b>✦ Важно:</b> если конкретного запроса нет — мы сформируем его на встрече, "
-    "либо я рекомендую тебе сначала забрать мой бесплатный гайд «Карта запроса» "
-    "в главном меню, он идеально помогает выявить ключевые темы.\n\n"
-    "⇨ После сессии я даю рекомендации и практики, составленные специально для тебя, "
-    "чтобы закрепить результат."
 )
 
 REVIEWS = [
@@ -135,20 +105,6 @@ REVIEWS = [
 @router.callback_query(F.data.in_({"personal_work", "consultation"}))
 async def cb_personal_work(callback: CallbackQuery) -> None:
     await callback.message.edit_text(PERSONAL_WORK_TEXT, reply_markup=personal_work_kb())
-
-
-@router.callback_query(F.data == "consultation_who")
-async def cb_consultation_who(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(
-        CONSULTATION_WHO_TEXT, reply_markup=consultation_sub_kb()
-    )
-
-
-@router.callback_query(F.data == "consultation_how")
-async def cb_consultation_how(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(
-        CONSULTATION_HOW_TEXT, reply_markup=consultation_how_kb()
-    )
 
 
 @router.callback_query(F.data == "consultation_reviews")
