@@ -5,7 +5,11 @@ from aiogram import Dispatcher
 import database
 from database import init_db, close_db
 from handlers import setup_routers
-from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
+from middlewares import (
+    CallbackSafetyMiddleware,
+    CommandCleanupMiddleware,
+    EventLoggingMiddleware,
+)
 
 
 @pytest_asyncio.fixture
@@ -34,5 +38,6 @@ def _dp():
     dp.callback_query.outer_middleware(CallbackSafetyMiddleware())
     dp.callback_query.outer_middleware(EventLoggingMiddleware())
     dp.message.outer_middleware(EventLoggingMiddleware())
+    dp.message.outer_middleware(CommandCleanupMiddleware())
     dp.include_router(setup_routers())
     return dp

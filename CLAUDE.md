@@ -44,6 +44,9 @@ python main.py
   - `CallbackSafetyMiddleware` — всегда шлёт `callback.answer()` в `finally`
     и гасит `TelegramBadRequest: message is not modified`.
   - `EventLoggingMiddleware` — пишет каждое нажатие/команду в таблицу `events`.
+  - `CommandCleanupMiddleware` — на любую команду (`/…`) зовёт
+    `ui.clear_screen`: текущее «окно» чата убирается, чтобы приветствие/раздел
+    не оставались висеть под ответом команды.
 - `filters.py` — `IsAdmin` (сверяет `from_user.id` с `admin_ids`).
 - `booking_config.py` — читает из env расписание (`WORK_TIMES`,
   `WORK_WEEKDAYS`), горизонт/лид-тайм/холд (`BOOKING_HORIZON_DAYS`,
@@ -67,9 +70,12 @@ python main.py
   `edit_screen(bot, chat_id, message_id, text, reply_markup=None)` —
   отредактировать «экран» тем же способом, глотая «not modified» /
   «message to edit not found». Оба — no-op при ошибке, вызывающему коду не
-  нужно оборачивать их в try/except. Плюс «единое окно на чат» поверх
-  модульного `_last_screen: dict[chat_id → message_id]` (in-memory, после
-  рестарта забывается — уборка косметическая):
+  нужно оборачивать их в try/except. Плюс «единое окно на чат»: id текущего
+  экрана хранится в таблице `settings` (`key=screen:<chat_id>`, через
+  `get_setting`/`set_setting`/`del_setting`) — **не** in-memory, чтобы трекинг
+  пережил рестарт (Railway передеплаивает часто; при in-memory состоянии
+  `/start` и «В меню» после рестарта не могли удалить прежнее приветствие →
+  дубликаты в чате):
   - `render_screen(bot, chat_id, text, reply_markup=None)` — **основной**
     способ показать контентный экран: редактирует единое окно чата **на
     месте** (`edit_message_text`), не пересоздавая сообщение. Это критично
@@ -80,10 +86,13 @@ python main.py
     окно и шлёт **новое**. Нужен там, где надо (пере)установить нижнюю
     клавиатуру (`/start`, «В меню») — `edit` не умеет ставить
     `ReplyKeyboardMarkup`.
-  - `track_screen`/`clear_screen` — запомнить/удалить текущее окно.
+  - `clear_screen(bot, chat_id)` — удалить текущее окно и забыть его (зовётся
+    из `CommandCleanupMiddleware` на любую команду и внутри `show_screen`).
   Итог: разделы переключаются `render_screen` (правка на месте → нижняя
   клавиатура видна во всех разделах), а `/start`/«В меню» пересоздают окно
-  с клавиатурой.
+  с клавиатурой. Оговорка: первый деплой этой схемы для уже открытых чатов —
+  в `settings` ещё нет `screen:<id>`, поэтому первое приветствие/раздел, что
+  «висело» до деплоя, разово не удалится (id старого сообщения неизвестен).
 - `handlers/` — по одному роутеру на файл, собираются в `setup_routers()`;
   `reply_router` зарегистрирован **перед** `fallback_router`, но порядок
   между ними функционально не важен: `fallback.py` ловит только

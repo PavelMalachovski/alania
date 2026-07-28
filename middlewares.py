@@ -6,6 +6,7 @@ from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
 from database import Event, get_session
+from ui import clear_screen
 
 logger = logging.getLogger(__name__)
 
@@ -63,4 +64,26 @@ class EventLoggingMiddleware(BaseMiddleware):
                 # аналитика не должна ломать обработку апдейта
                 logger.exception("Failed to log event %r for user %s", action, user_id)
 
+        return await handler(event, data)
+
+
+class CommandCleanupMiddleware(BaseMiddleware):
+    """Любая команда (/...) убирает текущее «окно» чата — приветствие или
+    раздел не остаются висеть под ответом команды. /start потом сам покажет
+    новое приветствие (его `show_screen` найдёт, что чистить уже нечего)."""
+
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: dict[str, Any],
+    ) -> Any:
+        if (
+            isinstance(event, Message)
+            and event.text
+            and event.text.startswith("/")
+        ):
+            bot = data.get("bot")
+            if bot is not None:
+                await clear_screen(bot, event.chat.id)
         return await handler(event, data)
