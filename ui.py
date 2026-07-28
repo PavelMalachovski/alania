@@ -54,11 +54,15 @@ async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
     return sent
 
 
-async def render_screen(bot, chat_id: int, text: str, reply_markup=None):
+async def render_screen(bot, chat_id: int, text: str, reply_markup=None, *,
+                        send_markup=None):
     """Показать экран, редактируя единое окно чата на месте. Сообщение не
     пересоздаётся — поэтому постоянная нижняя клавиатура (её держит первое
     сообщение с ReplyKeyboardMarkup) не теряется при переходах между разделами.
-    Если окна нет или его нельзя отредактировать — шлём новое и запоминаем."""
+    Если окна нет или его нельзя отредактировать — шлём новое. `send_markup`
+    задаёт reply_markup именно для этого фолбэка-отправки (например, чтобы при
+    пересоздании приветствия вернуть нижнюю клавиатуру, которую edit ставить
+    не умеет); по умолчанию — тот же `reply_markup`, что и для правки."""
     mid = await _get_screen(chat_id)
     if mid is not None:
         try:
@@ -72,7 +76,8 @@ async def render_screen(bot, chat_id: int, text: str, reply_markup=None):
             await _forget_screen(chat_id)    # окно удалено/непригодно
         except TelegramAPIError:
             await _forget_screen(chat_id)
-    sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    markup = send_markup if send_markup is not None else reply_markup
+    sent = await bot.send_message(chat_id, text, reply_markup=markup)
     await _set_screen(chat_id, sent.message_id)
     return sent.message_id
 

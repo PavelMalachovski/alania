@@ -39,15 +39,20 @@ async def test_start_deletes_previous_menu_window(env):
 
 
 @pytest.mark.asyncio
-async def test_back_to_menu_deletes_previous_window(env):
+async def test_back_to_menu_edits_in_place_no_duplicate(env):
     dp, bot, gcal, session = env
     from tests.test_booking_flow import press
     await _send_text(dp, bot, "/start", mid=7300)
-    welcome_id = session._mid                       # текущее окно (приветствие)
+    welcome_id = session._mid                       # окно приветствия
+    sends_before = sum(1 for n, d in session.log
+                       if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
     await press(dp, bot, "start_menu")              # «В меню»
-    # прежнее окно удалено, а не продублировано новым приветствием
-    assert any(n == "DeleteMessage" and d.get("message_id") == welcome_id
+    # приветствие возвращено правкой того же окна, а не новым сообщением
+    assert any(n == "EditMessageText" and d.get("message_id") == welcome_id
                for n, d in session.log)
+    sends_after = sum(1 for n, d in session.log
+                      if n == "SendMessage" and d.get("chat_id") == CLIENT_ID)
+    assert sends_after == sends_before              # новых сообщений не отправлено
 
 
 @pytest.mark.asyncio
