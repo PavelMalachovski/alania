@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 _WEEKDAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
 _CALENDAR_TEXT = (
-    "○─── ☾ ───○\n\n"
     "<b>✦ Запись на личную сессию</b>\n\n"
     "Выбери удобный для тебя день ⇩\n"
     "‼️ Часовой пояс: Прага CET (в скобках — московское время)"
@@ -45,7 +44,7 @@ def _month_index(year: int, month: int) -> int:
 async def _render_calendar(
     message, year: int, month: int, slots: list[datetime], cfg: BookingConfig,
     *, prefix: str = "book", back_cb: str = "consultation", send: bool = False,
-) -> None:
+) -> "Message | None":
     """Рисует сетку месяца по свободным слотам (aware-UTC список slots)."""
     tz = cfg.tz
     now = datetime.now(timezone.utc)
@@ -65,9 +64,8 @@ async def _render_calendar(
         prefix=prefix, back_cb=back_cb,
     )
     if send:
-        await message.answer(_CALENDAR_TEXT, reply_markup=kb)
-    else:
-        await message.edit_text(_CALENDAR_TEXT, reply_markup=kb)
+        return await message.answer(_CALENDAR_TEXT, reply_markup=kb)
+    return await message.edit_text(_CALENDAR_TEXT, reply_markup=kb)
 
 
 MAX_ACTIVE_BOOKINGS = 5
@@ -113,32 +111,28 @@ async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]
     )
 
 
-async def open_calendar(message, gcal: GoogleCalendar, cfg: BookingConfig, *, send: bool) -> None:
+async def open_calendar(message, gcal: GoogleCalendar, cfg: BookingConfig, *, send: bool) -> "Message | None":
     """Показать календарь записи. send=True — новым сообщением, иначе редактируя message."""
     try:
         slots = await _load_free(gcal, cfg)
     except Exception:
         logger.exception("Google Calendar недоступен при показе слотов")
         text = (
-            "○─── ☾ ───○\n\n"
             "Расписание сейчас недоступно 🤍 Попробуй через минуту "
             "или напиши Лане в личку — подберём время вручную."
         )
-        await (message.answer(text, reply_markup=booking_error_kb()) if send
-               else message.edit_text(text, reply_markup=booking_error_kb()))
-        return
+        return await (message.answer(text, reply_markup=booking_error_kb()) if send
+                      else message.edit_text(text, reply_markup=booking_error_kb()))
     if not slots:
         text = (
-            "○─── ☾ ───○\n\n"
             "Ближайшее время сейчас занято 🤍 Напиши Лане в ЛС — "
             "подберём время индивидуально."
         )
-        await (message.answer(text, reply_markup=booking_error_kb()) if send
-               else message.edit_text(text, reply_markup=booking_error_kb()))
-        return
+        return await (message.answer(text, reply_markup=booking_error_kb()) if send
+                      else message.edit_text(text, reply_markup=booking_error_kb()))
     # открываем на месяце ближайшего свободного слота
     first = slots[0].astimezone(cfg.tz).date()
-    await _render_calendar(message, first.year, first.month, slots, cfg, send=send)
+    return await _render_calendar(message, first.year, first.month, slots, cfg, send=send)
 
 
 @router.callback_query(F.data.in_({"booking_start", "consultation_pay"}))
@@ -255,7 +249,6 @@ async def cb_book_slot(
 
     hold_local = (now + booking_config.hold).astimezone(booking_config.tz)
     await callback.message.edit_text(
-        "○─── ☾ ───○\n\n"
         f"<b>✦ Твой слот: {format_slot_human(slot)}</b>\n\n"
         f"● Стоимость: {PRICE_TEXT}\n\n"
         f"Время держим до {hold_local:%H:%M} (Прага). "
@@ -317,7 +310,6 @@ async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> No
             slot = slot.replace(tzinfo=timezone.utc)
 
     await callback.message.edit_text(
-        "○─── ☾ ───○\n\n"
         "🤍 Принято! Проверяем оплату.\n\n"
         f"Как только Лана подтвердит, придёт сообщение о записи на "
         f"<b>{format_slot_human(slot)}</b>."
@@ -332,7 +324,7 @@ async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> No
     )
 
 
-async def open_my_bookings(message, tg_id: int, *, send: bool) -> None:
+async def open_my_bookings(message, tg_id: int, *, send: bool) -> "Message | None":
     now = datetime.now(timezone.utc)
     async with get_session() as session:
         rows = (await session.execute(
@@ -343,17 +335,17 @@ async def open_my_bookings(message, tg_id: int, *, send: bool) -> None:
             ).order_by(Booking.slot_start)
         )).scalars().all()
     if not rows:
-        text = "○─── ☾ ───○\n\nУ тебя пока нет активных записей 🤍"
+        text = "У тебя пока нет активных записей 🤍"
         kb = my_bookings_kb([])
     else:
         items = []
         for b in rows:
             slot = b.slot_start if b.slot_start.tzinfo else b.slot_start.replace(tzinfo=timezone.utc)
             items.append((format_slot_human(slot), b.id))
-        text = "○─── ☾ ───○\n\n<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩"
+        text = "<b>✦ Твои записи</b>\n\nВыбери, что перенести ⇩"
         kb = my_bookings_kb(items)
-    await (message.answer(text, reply_markup=kb) if send
-           else message.edit_text(text, reply_markup=kb))
+    return await (message.answer(text, reply_markup=kb) if send
+                  else message.edit_text(text, reply_markup=kb))
 
 
 @router.callback_query(F.data == "my_bookings")
@@ -511,7 +503,6 @@ async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
             await session.commit()
             await state.clear()
             await callback.message.edit_text(
-                "○─── ☾ ───○\n\n"
                 f"✦ Перенесено на <b>{format_slot_human(new_slot)}</b> 🤍",
                 reply_markup=lead_done_kb(),
             )
@@ -531,7 +522,6 @@ async def cb_resched_slot(callback: CallbackQuery, state: FSMContext, bot: Bot,
     )
     await state.set_state(RescheduleForm.reason)
     await callback.message.edit_text(
-        "○─── ☾ ───○\n\n"
         "До сессии меньше 24 часов — перенос подтверждает Лана.\n\n"
         "Напиши, пожалуйста, причину переноса ⇩"
     )
@@ -575,7 +565,6 @@ async def resched_reason(message: Message, state: FSMContext, bot: Bot,
         booking.reschedule_status = "pending"
         await session.commit()
     await _finish_screen(
-        "○─── ☾ ───○\n\n"
         "🤍 Запрос на перенос отправлен Лане. Как решится — пришлём сообщение.",
         lead_done_kb(),
     )

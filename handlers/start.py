@@ -1,16 +1,15 @@
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
-from keyboards.inline import main_menu_kb
 from keyboards.reply import main_reply_kb
+from ui import show_screen
 
 router = Router()
 
 MAIN_MENU_TEXT = (
-    "○─── ☾ ───○\n\n"
     "Это пространство создано для того, чтобы помочь тебе подсветить важное "
     "и найти ответы на свои вопросы 🤍\n\n"
     "Иногда я буду присылать сюда важные обновления, подкасты и материалы, "
@@ -19,15 +18,8 @@ MAIN_MENU_TEXT = (
 )
 
 
-async def open_main_menu(message, *, send: bool) -> None:
-    if send:
-        await message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
-    else:
-        await message.edit_text(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
-
-
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext) -> None:
+async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
     await state.clear()
     async with get_session() as session:
         user = await session.get(User, message.from_user.id)
@@ -43,10 +35,8 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             user.full_name = message.from_user.full_name
         await session.commit()
 
-    await message.answer(
-        MAIN_MENU_TEXT + "\n\nБыстрые действия — на клавиатуре ниже 👇",
-        reply_markup=main_reply_kb(),
-    )
+    # show_screen убирает предыдущее окно чата → повторный /start не копит меню.
+    await show_screen(bot, message.chat.id, MAIN_MENU_TEXT, main_reply_kb())
 
 
 @router.message(Command("id"))
@@ -55,6 +45,6 @@ async def cmd_id(message: Message) -> None:
 
 
 @router.callback_query(F.data == "start_menu")
-async def cb_start_menu(callback: CallbackQuery, state: FSMContext) -> None:
+async def cb_start_menu(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     await state.clear()
-    await open_main_menu(callback.message, send=False)
+    await show_screen(bot, callback.message.chat.id, MAIN_MENU_TEXT, main_reply_kb())

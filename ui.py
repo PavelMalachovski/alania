@@ -4,6 +4,11 @@ from aiogram.exceptions import TelegramAPIError
 
 logger = logging.getLogger(__name__)
 
+# id последнего показанного «экрана» на чат — чтобы новое окно (или команда)
+# удаляло предыдущее и в чате не копились устаревшие меню. In-memory: после
+# рестарта просто забываем старые окна (уборка косметическая, не критичная).
+_last_screen: dict[int, int] = {}
+
 
 async def delete_safe(bot, chat_id: int, message_id: int) -> None:
     """Удалить сообщение, не падая на ошибке (старше 48ч, уже удалено, нет прав)."""
@@ -11,6 +16,28 @@ async def delete_safe(bot, chat_id: int, message_id: int) -> None:
         await bot.delete_message(chat_id, message_id)
     except TelegramAPIError:
         logger.debug("delete_safe: не удалил %s/%s", chat_id, message_id)
+
+
+def track_screen(chat_id: int, message) -> None:
+    """Запомнить сообщение как текущий «экран» чата (id для будущей уборки)."""
+    mid = getattr(message, "message_id", None)
+    if mid is not None:
+        _last_screen[chat_id] = mid
+
+
+async def clear_screen(bot, chat_id: int) -> None:
+    """Удалить ранее показанный экран этого чата (если был) и забыть его."""
+    prev = _last_screen.pop(chat_id, None)
+    if prev is not None:
+        await delete_safe(bot, chat_id, prev)
+
+
+async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
+    """Убрать предыдущее окно чата и показать новое, запомнив его как текущее."""
+    await clear_screen(bot, chat_id)
+    sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    track_screen(chat_id, sent)
+    return sent
 
 
 async def edit_screen(bot, chat_id: int, message_id: int, text: str,

@@ -21,7 +21,6 @@ CHECK_INTERVAL = 600  # секунд между проверками
 REMINDER_LEAD = timedelta(hours=24)
 
 FOLLOWUP_TEXT = (
-    "○─── ☾ ───○\n\n"
     "Вижу, ты интересовалась консультацией «Точка сборки» 🤍\n\n"
     "Могу ли я чем-то помочь — ответить на вопросы "
     "или подобрать удобное время для сессии?"
@@ -103,7 +102,6 @@ async def reminder_pass(bot: Bot, now: datetime | None = None) -> int:
         try:
             await bot.send_message(
                 b.telegram_id,
-                "○─── ☾ ───○\n\n"
                 "Напоминаю: завтра у тебя консультация 🤍\n"
                 f"<b>{format_slot_human(slot)}</b>\n\n"
                 "Лана пришлёт ссылку на видеозвонок перед началом. До встречи ✦",

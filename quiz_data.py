@@ -1,5 +1,4 @@
 INTRO_TEXT = (
-    "○─── ☾ ───○\n\n"
     "<b>✦ Тест «Кто управляет твоей жизнью?»</b>\n\n"
     "Интерактивный тест на автономию, сценарии мышления и скрытые ресурсы.\n\n"
     "Пройти 15 вопросов этого теста — сделать первый шаг к пониманию того, где "
@@ -266,7 +265,6 @@ def result_for_score(score: int) -> tuple[str, str, str]:
     for lo, hi, symbol, title, body in _TIERS:
         if lo <= score <= hi:
             full = (
-                "○─── ☾ ───○\n\n"
                 f"{symbol} Твой результат: {score}/60\n"
                 f"{title}\n\n"
                 f"{body}"

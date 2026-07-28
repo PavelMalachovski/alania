@@ -16,7 +16,6 @@ class Quiz(StatesGroup):
 def _question_text(idx: int) -> str:
     q = QUESTIONS[idx]
     return (
-        "○─── ☾ ───○\n\n"
         f"Вопрос {idx + 1}/{len(QUESTIONS)}\n\n"
         f"{q['text']}"
     )

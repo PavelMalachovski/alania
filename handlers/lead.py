@@ -32,7 +32,6 @@ async def cb_lead_start(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(LeadForm.name)
     await state.update_data(product=product)
     await callback.message.answer(
-        "○─── ☾ ───○\n\n"
         f"<b>✦ Заявка: {PRODUCTS[product]}</b>\n\n"
         "Как тебя зовут?",
         reply_markup=lead_cancel_kb(),
@@ -123,7 +122,6 @@ async def _finish_lead(
         await session.commit()
 
     await reply_to.answer(
-        "○─── ☾ ───○\n\n"
         f"✦ Спасибо, {html.quote(name)}!\n\n"
         "Твоя заявка принята. Лана свяжется с тобой в ближайшее время 🤍",
         reply_markup=lead_done_kb(),
