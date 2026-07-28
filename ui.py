@@ -1,6 +1,6 @@
 import logging
 
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError
 
 from database import del_setting, get_setting, set_setting
 
@@ -45,41 +45,27 @@ async def clear_screen(bot, chat_id: int) -> None:
 
 
 async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
-    """Убрать предыдущее окно чата и показать новое, запомнив его как текущее.
-    Используется там, где нужно (пере)установить нижнюю клавиатуру — /start,
-    возврат в меню (edit не умеет ставить ReplyKeyboardMarkup)."""
+    """Единое «окно» на чат: удалить предыдущий экран и показать новый
+    сообщением, запомнив его. Нажатие любой кнопки/раздела так убирает
+    предыдущий экран (приветствие «исчезает», а не копится).
+
+    Почему send, а не edit: сообщение с нижней клавиатурой
+    (`ReplyKeyboardMarkup`) нельзя перерисовать в раздел через
+    `edit_message_text` — правка не срабатывает. А удаление сообщения нижнюю
+    клавиатуру НЕ убирает (она на уровне чата, держится до `ReplyKeyboardRemove`
+    или новой клавиатуры), поэтому 7 кнопок остаются видны во всех разделах."""
     await clear_screen(bot, chat_id)
     sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
     await _set_screen(chat_id, sent.message_id)
     return sent
 
 
-async def render_screen(bot, chat_id: int, text: str, reply_markup=None, *,
-                        send_markup=None):
-    """Показать экран, редактируя единое окно чата на месте. Сообщение не
-    пересоздаётся — поэтому постоянная нижняя клавиатура (её держит первое
-    сообщение с ReplyKeyboardMarkup) не теряется при переходах между разделами.
-    Если окна нет или его нельзя отредактировать — шлём новое. `send_markup`
-    задаёт reply_markup именно для этого фолбэка-отправки (например, чтобы при
-    пересоздании приветствия вернуть нижнюю клавиатуру, которую edit ставить
-    не умеет); по умолчанию — тот же `reply_markup`, что и для правки."""
-    mid = await _get_screen(chat_id)
+async def track_screen(chat_id: int, message) -> None:
+    """Запомнить уже отправленное сообщение как текущее окно чата — для тех,
+    кто шлёт его сам (open_calendar/open_my_bookings), а не через show_screen."""
+    mid = getattr(message, "message_id", None)
     if mid is not None:
-        try:
-            await bot.edit_message_text(
-                text, chat_id=chat_id, message_id=mid, reply_markup=reply_markup
-            )
-            return mid
-        except TelegramBadRequest as exc:
-            if "not modified" in str(exc).lower():
-                return mid           # тот же экран — оставляем как есть
-            await _forget_screen(chat_id)    # окно удалено/непригодно
-        except TelegramAPIError:
-            await _forget_screen(chat_id)
-    markup = send_markup if send_markup is not None else reply_markup
-    sent = await bot.send_message(chat_id, text, reply_markup=markup)
-    await _set_screen(chat_id, sent.message_id)
-    return sent.message_id
+        await _set_screen(chat_id, mid)
 
 
 async def edit_screen(bot, chat_id: int, message_id: int, text: str,
