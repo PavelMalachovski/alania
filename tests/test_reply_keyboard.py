@@ -30,8 +30,6 @@ async def test_start_sets_reply_keyboard(env):
 @pytest.mark.asyncio
 async def test_start_deletes_previous_menu_window(env):
     dp, bot, gcal, session = env
-    import ui
-    ui._last_screen.pop(CLIENT_ID, None)   # чистый старт (dict глобальный на процесс)
     await _send_text(dp, bot, "/start", mid=7100)
     welcome1_id = session._mid              # id только что показанного меню
     await _send_text(dp, bot, "/start", mid=7101)
@@ -41,10 +39,20 @@ async def test_start_deletes_previous_menu_window(env):
 
 
 @pytest.mark.asyncio
+async def test_back_to_menu_deletes_previous_window(env):
+    dp, bot, gcal, session = env
+    from tests.test_booking_flow import press
+    await _send_text(dp, bot, "/start", mid=7300)
+    welcome_id = session._mid                       # текущее окно (приветствие)
+    await press(dp, bot, "start_menu")              # «В меню»
+    # прежнее окно удалено, а не продублировано новым приветствием
+    assert any(n == "DeleteMessage" and d.get("message_id") == welcome_id
+               for n, d in session.log)
+
+
+@pytest.mark.asyncio
 async def test_section_edits_menu_in_place_keeps_keyboard_host(env):
     dp, bot, gcal, session = env
-    import ui
-    ui._last_screen.pop(CLIENT_ID, None)
     await _send_text(dp, bot, "/start", mid=7200)
     welcome_id = session._mid                      # окно-хост нижней клавиатуры
     await _send_text(dp, bot, "О личной работе", mid=7201)
@@ -59,8 +67,6 @@ async def test_section_edits_menu_in_place_keeps_keyboard_host(env):
 @pytest.mark.asyncio
 async def test_reply_book_opens_calendar_and_deletes_tap(env):
     dp, bot, gcal, session = env
-    import ui
-    ui._last_screen.pop(CLIENT_ID, None)
     await _send_text(dp, bot, "/start", mid=7009)            # окно-хост с нижней клавиатурой
     await _send_text(dp, bot, "Записаться на сессию", mid=7010)
     # тап удалён

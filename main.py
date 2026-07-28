@@ -13,7 +13,11 @@ from aiogram.types import ErrorEvent
 from database import close_db, init_db
 from followup import followup_loop
 from handlers import setup_routers
-from middlewares import CallbackSafetyMiddleware, EventLoggingMiddleware
+from middlewares import (
+    CallbackSafetyMiddleware,
+    CommandCleanupMiddleware,
+    EventLoggingMiddleware,
+)
 
 load_dotenv()
 
@@ -65,6 +69,7 @@ async def main() -> None:
     dp.callback_query.outer_middleware(CallbackSafetyMiddleware())
     dp.callback_query.outer_middleware(EventLoggingMiddleware())
     dp.message.outer_middleware(EventLoggingMiddleware())
+    dp.message.outer_middleware(CommandCleanupMiddleware())
     dp.include_router(setup_routers())
 
     @dp.errors()

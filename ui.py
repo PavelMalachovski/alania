@@ -2,12 +2,29 @@ import logging
 
 from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
+from database import del_setting, get_setting, set_setting
+
 logger = logging.getLogger(__name__)
 
-# id последнего показанного «экрана» на чат — чтобы новое окно (или команда)
-# удаляло предыдущее и в чате не копились устаревшие меню. In-memory: после
-# рестарта просто забываем старые окна (уборка косметическая, не критичная).
-_last_screen: dict[int, int] = {}
+# id текущего «экрана» на чат храним в таблице settings (key=screen:<chat_id>),
+# а не в памяти — чтобы трекинг переживал рестарты. Railway передеплаивает бота
+# часто; при in-memory состоянии /start после рестарта не мог удалить прежнее
+# приветствие и в чате появлялся дубликат.
+def _screen_key(chat_id: int) -> str:
+    return f"screen:{chat_id}"
+
+
+async def _get_screen(chat_id: int) -> int | None:
+    raw = await get_setting(_screen_key(chat_id))
+    return int(raw) if raw else None
+
+
+async def _set_screen(chat_id: int, message_id: int) -> None:
+    await set_setting(_screen_key(chat_id), str(message_id))
+
+
+async def _forget_screen(chat_id: int) -> None:
+    await del_setting(_screen_key(chat_id))
 
 
 async def delete_safe(bot, chat_id: int, message_id: int) -> None:
@@ -18,18 +35,13 @@ async def delete_safe(bot, chat_id: int, message_id: int) -> None:
         logger.debug("delete_safe: не удалил %s/%s", chat_id, message_id)
 
 
-def track_screen(chat_id: int, message) -> None:
-    """Запомнить сообщение как текущий «экран» чата (id для будущей уборки)."""
-    mid = getattr(message, "message_id", None)
-    if mid is not None:
-        _last_screen[chat_id] = mid
-
-
 async def clear_screen(bot, chat_id: int) -> None:
-    """Удалить ранее показанный экран этого чата (если был) и забыть его."""
-    prev = _last_screen.pop(chat_id, None)
-    if prev is not None:
-        await delete_safe(bot, chat_id, prev)
+    """Удалить текущее окно этого чата (если было) и забыть его. Зовётся из
+    middleware при любой команде — чтобы приветствие/раздел не оставались висеть."""
+    mid = await _get_screen(chat_id)
+    if mid is not None:
+        await delete_safe(bot, chat_id, mid)
+        await _forget_screen(chat_id)
 
 
 async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
@@ -38,7 +50,7 @@ async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
     возврат в меню (edit не умеет ставить ReplyKeyboardMarkup)."""
     await clear_screen(bot, chat_id)
     sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
-    track_screen(chat_id, sent)
+    await _set_screen(chat_id, sent.message_id)
     return sent
 
 
@@ -47,7 +59,7 @@ async def render_screen(bot, chat_id: int, text: str, reply_markup=None):
     пересоздаётся — поэтому постоянная нижняя клавиатура (её держит первое
     сообщение с ReplyKeyboardMarkup) не теряется при переходах между разделами.
     Если окна нет или его нельзя отредактировать — шлём новое и запоминаем."""
-    mid = _last_screen.get(chat_id)
+    mid = await _get_screen(chat_id)
     if mid is not None:
         try:
             await bot.edit_message_text(
@@ -57,11 +69,11 @@ async def render_screen(bot, chat_id: int, text: str, reply_markup=None):
         except TelegramBadRequest as exc:
             if "not modified" in str(exc).lower():
                 return mid           # тот же экран — оставляем как есть
-            _last_screen.pop(chat_id, None)   # окно удалено/непригодно
+            await _forget_screen(chat_id)    # окно удалено/непригодно
         except TelegramAPIError:
-            _last_screen.pop(chat_id, None)
+            await _forget_screen(chat_id)
     sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
-    _last_screen[chat_id] = sent.message_id
+    await _set_screen(chat_id, sent.message_id)
     return sent.message_id
 
 

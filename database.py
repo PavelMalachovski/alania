@@ -139,6 +139,14 @@ async def set_setting(key: str, value: str) -> None:
         await session.commit()
 
 
+async def del_setting(key: str) -> None:
+    async with get_session() as session:
+        setting = await session.get(Setting, key)
+        if setting:
+            await session.delete(setting)
+            await session.commit()
+
+
 async def close_db() -> None:
     global engine
     if engine:
