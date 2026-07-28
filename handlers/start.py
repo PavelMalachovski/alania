@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
 from keyboards.reply import main_reply_kb
-from ui import render_screen, show_screen
+from ui import show_screen
 
 router = Router()
 
@@ -46,11 +46,7 @@ async def cmd_id(message: Message) -> None:
 
 @router.callback_query(F.data == "start_menu")
 async def cb_start_menu(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
-    # «В меню»/«Назад» возвращают приветствие ПРАВКОЙ текущего окна на месте —
-    # новое сообщение не создаётся (иначе копятся дубликаты). Нижняя клавиатура
-    # держится на этом же окне. Фолбэк send_markup — если окна вдруг нет.
+    # «В меню»/«Назад» убирают текущий экран и показывают приветствие новым
+    # сообщением (единое окно на чат — предыдущее исчезает, а не дублируется).
     await state.clear()
-    await render_screen(
-        bot, callback.message.chat.id, MAIN_MENU_TEXT,
-        reply_markup=None, send_markup=main_reply_kb(),
-    )
+    await show_screen(bot, callback.message.chat.id, MAIN_MENU_TEXT, main_reply_kb())
