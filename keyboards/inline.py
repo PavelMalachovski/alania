@@ -21,13 +21,10 @@ def ask_lana_kb():
 
 
 def personal_work_kb():
-    """Экран «О личной работе» (бывшая консультация без прослойки «Точка сборки»)."""
+    """Экран «О личной работе». Запись/вопрос в ЛС — в нижней клавиатуре,
+    поэтому здесь только «Отзывы» + возврат в меню (без дублей нижней панели)."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="Кому подойдёт?", callback_data="consultation_who")
-    builder.button(text="Как проходит сессия?", callback_data="consultation_how")
     builder.button(text="Отзывы", callback_data="consultation_reviews")
-    builder.button(text="Записаться", callback_data="booking_start")
-    builder.button(text="Задать вопрос в ЛС", url=DM_URL)
     builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
@@ -260,14 +257,17 @@ def quiz_intro_kb():
 
 
 def quiz_question_kb(options: "list[tuple[str, int]]", is_first: bool):
-    """options — список (текст варианта, балл) в порядке показа."""
+    """options — список (текст варианта, балл) в порядке показа. Кнопки —
+    короткие номера «1..N» (полный текст вариантов идёт в тексте вопроса,
+    иначе Telegram обрезает длинные подписи inline-кнопок)."""
     builder = InlineKeyboardBuilder()
-    for text, score in options:
-        builder.button(text=text, callback_data=f"quiz_ans:{score}")
+    for i, (_text, score) in enumerate(options, 1):
+        builder.button(text=str(i), callback_data=f"quiz_ans:{score}")
     if not is_first:
         builder.button(text="⇦ Назад", callback_data="quiz_back")
     builder.button(text="✕ Прервать", callback_data="start_menu")
-    builder.adjust(1)
+    # ряд номеров, затем (Назад +) Прервать
+    builder.adjust(len(options), 2 if not is_first else 1)
     return builder.as_markup()
 
 
