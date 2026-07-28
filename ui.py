@@ -1,6 +1,6 @@
 import logging
 
-from aiogram.exceptions import TelegramAPIError
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +33,36 @@ async def clear_screen(bot, chat_id: int) -> None:
 
 
 async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
-    """Убрать предыдущее окно чата и показать новое, запомнив его как текущее."""
+    """Убрать предыдущее окно чата и показать новое, запомнив его как текущее.
+    Используется там, где нужно (пере)установить нижнюю клавиатуру — /start,
+    возврат в меню (edit не умеет ставить ReplyKeyboardMarkup)."""
     await clear_screen(bot, chat_id)
     sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
     track_screen(chat_id, sent)
     return sent
+
+
+async def render_screen(bot, chat_id: int, text: str, reply_markup=None):
+    """Показать экран, редактируя единое окно чата на месте. Сообщение не
+    пересоздаётся — поэтому постоянная нижняя клавиатура (её держит первое
+    сообщение с ReplyKeyboardMarkup) не теряется при переходах между разделами.
+    Если окна нет или его нельзя отредактировать — шлём новое и запоминаем."""
+    mid = _last_screen.get(chat_id)
+    if mid is not None:
+        try:
+            await bot.edit_message_text(
+                text, chat_id=chat_id, message_id=mid, reply_markup=reply_markup
+            )
+            return mid
+        except TelegramBadRequest as exc:
+            if "not modified" in str(exc).lower():
+                return mid           # тот же экран — оставляем как есть
+            _last_screen.pop(chat_id, None)   # окно удалено/непригодно
+        except TelegramAPIError:
+            _last_screen.pop(chat_id, None)
+    sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
+    _last_screen[chat_id] = sent.message_id
+    return sent.message_id
 
 
 async def edit_screen(bot, chat_id: int, message_id: int, text: str,

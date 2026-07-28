@@ -24,57 +24,70 @@ from keyboards.reply import (
     BTN_QUIZ,
 )
 from quiz_data import INTRO_TEXT
-from ui import clear_screen, delete_safe, show_screen, track_screen
+from ui import delete_safe, render_screen
 
 router = Router()
 
 ASK_TEXT = "Напиши Лане в личные сообщения — она ответит 🤍"
 
 
-# Разделы: тап по нижней кнопке удаляется, предыдущее окно чата убирается,
-# показывается новый экран (см. show_screen — единое «окно» на чат).
+class _Screen:
+    """Прокси-«сообщение» для open_calendar/open_my_bookings: они рендерят
+    экран через render_screen (edit-in-place единого окна чата), а не новым
+    сообщением. Так постоянная нижняя клавиатура не теряется при входе в
+    запись/мои записи с нижней кнопки."""
+
+    def __init__(self, bot: Bot, chat_id: int) -> None:
+        self._bot = bot
+        self._chat_id = chat_id
+
+    async def edit_text(self, text: str, reply_markup=None):
+        return await render_screen(self._bot, self._chat_id, text, reply_markup)
+
+    # open_calendar(send=False) зовёт только edit_text; answer — на всякий случай
+    answer = edit_text
+
+
+# Разделы: тап по нижней кнопке удаляется, а экран рендерится поверх единого
+# окна чата (render_screen редактирует на месте — нижняя клавиатура остаётся).
 @router.message(StateFilter(None), F.text == BTN_PERSONAL)
 async def reply_personal(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await show_screen(bot, message.chat.id, PERSONAL_WORK_TEXT, personal_work_kb())
+    await render_screen(bot, message.chat.id, PERSONAL_WORK_TEXT, personal_work_kb())
 
 
 @router.message(StateFilter(None), F.text == BTN_GAME)
 async def reply_game(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await show_screen(bot, message.chat.id, GAME_TEXT, game_kb())
+    await render_screen(bot, message.chat.id, GAME_TEXT, game_kb())
 
 
 @router.message(StateFilter(None), F.text == BTN_CHANNEL)
 async def reply_channel(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await show_screen(bot, message.chat.id, CHANNEL_TEXT, channel_kb())
+    await render_screen(bot, message.chat.id, CHANNEL_TEXT, channel_kb())
 
 
 @router.message(StateFilter(None), F.text == BTN_QUIZ)
 async def reply_quiz(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await show_screen(bot, message.chat.id, INTRO_TEXT, quiz_intro_kb())
+    await render_screen(bot, message.chat.id, INTRO_TEXT, quiz_intro_kb())
 
 
 @router.message(StateFilter(None), F.text == BTN_BOOK)
 async def reply_book(message: Message, gcal: GoogleCalendar,
                      booking_config: BookingConfig, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await clear_screen(bot, message.chat.id)
-    sent = await open_calendar(message, gcal, booking_config, send=True)
-    track_screen(message.chat.id, sent)
+    await open_calendar(_Screen(bot, message.chat.id), gcal, booking_config, send=False)
 
 
 @router.message(StateFilter(None), F.text == BTN_MY)
 async def reply_my(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await clear_screen(bot, message.chat.id)
-    sent = await open_my_bookings(message, message.from_user.id, send=True)
-    track_screen(message.chat.id, sent)
+    await open_my_bookings(_Screen(bot, message.chat.id), message.from_user.id, send=False)
 
 
 @router.message(StateFilter(None), F.text == BTN_ASK)
 async def reply_ask(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
-    await show_screen(bot, message.chat.id, ASK_TEXT, ask_lana_kb())
+    await render_screen(bot, message.chat.id, ASK_TEXT, ask_lana_kb())
