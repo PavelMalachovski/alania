@@ -19,9 +19,10 @@ async def test_start_sets_reply_keyboard(env):
     dp, bot, gcal, session = env
     await _send_text(dp, bot, "/start")
     sends = [d for n, d in session.log if n == "SendMessage" and d.get("chat_id") == CLIENT_ID]
-    kb = sends[-1].get("reply_markup", {})
-    assert "keyboard" in kb   # ReplyKeyboardMarkup (не inline_keyboard)
-    labels = [b["text"] for row in kb["keyboard"] for b in row]
+    # нижняя клавиатура — на отдельном сообщении-якоре (не на приветствии)
+    kbs = [d.get("reply_markup", {}) for d in sends if "keyboard" in d.get("reply_markup", {})]
+    assert kbs, "нет сообщения с нижней клавиатурой (якорь)"
+    labels = [b["text"] for row in kbs[-1]["keyboard"] for b in row]
     assert "Записаться на сессию" in labels and "Мои записи" in labels
     assert "О личной работе" in labels and "Задать вопрос Лане" in labels
     assert "🏠 Меню" not in labels   # кнопка «Меню» убрана
@@ -36,6 +37,20 @@ async def test_start_deletes_previous_menu_window(env):
     # повторный /start убрал предыдущее окно
     assert any(n == "DeleteMessage" and d.get("message_id") == welcome1_id
                for n, d in session.log)
+
+
+@pytest.mark.asyncio
+async def test_keyboard_anchor_survives_section_navigation(env):
+    import ui
+    dp, bot, gcal, session = env
+    await _send_text(dp, bot, "/start", mid=7400)
+    anchor_id = await ui._get_anchor(CLIENT_ID)        # сообщение-якорь клавиатуры
+    assert anchor_id is not None
+    await _send_text(dp, bot, "О личной работе", mid=7401)
+    # якорь НЕ удаляется при переходе в раздел → нижняя клавиатура остаётся
+    assert not any(n == "DeleteMessage" and d.get("message_id") == anchor_id
+                   for n, d in session.log)
+    assert await ui._get_anchor(CLIENT_ID) == anchor_id
 
 
 @pytest.mark.asyncio
