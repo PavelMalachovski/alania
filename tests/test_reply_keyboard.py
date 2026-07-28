@@ -22,8 +22,8 @@ async def test_start_sets_reply_keyboard(env):
     kb = sends[-1].get("reply_markup", {})
     assert "keyboard" in kb   # ReplyKeyboardMarkup (не inline_keyboard)
     labels = [b["text"] for row in kb["keyboard"] for b in row]
-    assert "Записаться" in labels and "Мои записи" in labels
-    assert "О личной работе" in labels and "Вопрос Лане" in labels
+    assert "Записаться на сессию" in labels and "Мои записи" in labels
+    assert "О личной работе" in labels and "Задать вопрос Лане" in labels
     assert "🏠 Меню" not in labels   # кнопка «Меню» убрана
 
 
@@ -43,7 +43,7 @@ async def test_start_deletes_previous_menu_window(env):
 @pytest.mark.asyncio
 async def test_reply_book_opens_calendar_and_deletes_tap(env):
     dp, bot, gcal, session = env
-    await _send_text(dp, bot, "Записаться", mid=7010)
+    await _send_text(dp, bot, "Записаться на сессию", mid=7010)
     # тап удалён
     assert any(n == "DeleteMessage" and d.get("message_id") == 7010 for n, d in session.log)
     # показан календарь (есть book_day: или noop в новом сообщении)
