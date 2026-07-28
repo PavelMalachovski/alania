@@ -6,7 +6,6 @@ from keyboards.inline import lead_done_kb
 router = Router()
 
 _LOST_TEXT = (
-    "○─── ☾ ───○\n\n"
     "Похоже, сессия сбросилась (бот перезапускался) 🤍\n"
     "Начни заново из меню — всё быстро восстановится."
 )

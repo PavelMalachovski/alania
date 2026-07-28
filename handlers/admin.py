@@ -122,7 +122,6 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar
     try:
         await bot.send_message(
             user_id,
-            "○─── ☾ ───○\n\n"
             "<b>✦ Вы оплатили, спасибо!</b> 🤍\n\n"
             f"Запись подтверждена: <b>{format_slot_human(slot)}</b>.\n\n"
             "Лана свяжется с тобой перед сессией и пришлёт ссылку на видеозвонок. "
@@ -172,7 +171,6 @@ async def cb_reject_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
     try:
         await bot.send_message(
             user_id,
-            "○─── ☾ ───○\n\n"
             "К сожалению, оплату по этой записи мы не нашли, и слот освобождён.\n"
             "Если ты оплачивал(а) — напиши Лане в ЛС, разберёмся 🤍",
             reply_markup=lead_done_kb(),
@@ -240,7 +238,6 @@ async def cb_resched_ok(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar,
     try:
         await bot.send_message(
             user_id,
-            "○─── ☾ ───○\n\n"
             f"✦ Перенос подтверждён: <b>{format_slot_human(moved)}</b> 🤍",
             reply_markup=lead_done_kb())
     except TelegramAPIError:
@@ -276,7 +273,6 @@ async def cb_resched_no(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar)
     try:
         await bot.send_message(
             user_id,
-            "○─── ☾ ───○\n\n"
             "Перенос отклонён. К сожалению, запись отменена, "
             "оплата не возвращается 🤍",
             reply_markup=lead_done_kb())

@@ -12,20 +12,6 @@ CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
 GUIDE_URL = "https://t.me/c/2260920571/433"
 
 
-def main_menu_kb():
-    builder = InlineKeyboardBuilder()
-    builder.button(text="О личной работе", callback_data="personal_work")
-    builder.button(text="Игра VECHNOST", callback_data="game")
-    builder.button(text="Бесплатный Telegram-канал", url=CHANNEL_URL)
-    builder.button(
-        text="Тест «Кто управляет твоей жизнью?»",
-        callback_data="quiz_intro",
-    )
-    builder.button(text="Мои записи", callback_data="my_bookings")
-    builder.adjust(1)
-    return builder.as_markup()
-
-
 def ask_lana_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Написать в ЛС", url=DM_URL)
