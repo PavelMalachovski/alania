@@ -47,17 +47,41 @@ async def clear_screen(bot, chat_id: int) -> None:
 async def show_screen(bot, chat_id: int, text: str, reply_markup=None):
     """Единое «окно» на чат: удалить предыдущий экран и показать новый
     сообщением, запомнив его. Нажатие любой кнопки/раздела так убирает
-    предыдущий экран (приветствие «исчезает», а не копится).
-
-    Почему send, а не edit: сообщение с нижней клавиатурой
-    (`ReplyKeyboardMarkup`) нельзя перерисовать в раздел через
-    `edit_message_text` — правка не срабатывает. А удаление сообщения нижнюю
-    клавиатуру НЕ убирает (она на уровне чата, держится до `ReplyKeyboardRemove`
-    или новой клавиатуры), поэтому 7 кнопок остаются видны во всех разделах."""
+    предыдущий экран (приветствие «исчезает», а не копится). `reply_markup`
+    здесь — только inline-клавиатура экрана (или None); нижнюю клавиатуру на
+    контентные окна вешать нельзя (см. reset_keyboard)."""
     await clear_screen(bot, chat_id)
     sent = await bot.send_message(chat_id, text, reply_markup=reply_markup)
     await _set_screen(chat_id, sent.message_id)
     return sent
+
+
+# ── Постоянный «якорь» нижней клавиатуры ─────────────────────────────
+# Нижнюю клавиатуру нельзя держать на контентном окне: его удаляют при каждом
+# переходе, а удаление сообщения убирает reply-клавиатуру (и перерисовать такое
+# сообщение через edit тоже нельзя). Поэтому клавиатура живёт на ОТДЕЛЬНОМ
+# сообщении-якоре (`kb:<chat_id>` в settings), которое навигация не трогает —
+# так 7 кнопок остаются видны на всех экранах. Якорь пересоздаётся на /start
+# (в т.ч. если пользователь очистил чат и старый якорь пропал).
+ANCHOR_TEXT = "🤍"
+
+
+def _anchor_key(chat_id: int) -> str:
+    return f"kb:{chat_id}"
+
+
+async def _get_anchor(chat_id: int) -> int | None:
+    raw = await get_setting(_anchor_key(chat_id))
+    return int(raw) if raw else None
+
+
+async def reset_keyboard(bot, chat_id: int, keyboard) -> None:
+    """Пересоздать сообщение-якорь с нижней клавиатурой (старый удалить)."""
+    old = await _get_anchor(chat_id)
+    if old is not None:
+        await delete_safe(bot, chat_id, old)
+    sent = await bot.send_message(chat_id, ANCHOR_TEXT, reply_markup=keyboard)
+    await set_setting(_anchor_key(chat_id), str(sent.message_id))
 
 
 async def track_screen(chat_id: int, message) -> None:

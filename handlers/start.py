@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
 from keyboards.reply import main_reply_kb
-from ui import show_screen
+from ui import reset_keyboard, show_screen
 
 router = Router()
 
@@ -35,8 +35,10 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
             user.full_name = message.from_user.full_name
         await session.commit()
 
-    # show_screen убирает предыдущее окно чата → повторный /start не копит меню.
-    await show_screen(bot, message.chat.id, MAIN_MENU_TEXT, main_reply_kb())
+    # Нижняя клавиатура — на отдельном якоре (переживает удаление контентных
+    # окон), приветствие — обычное контентное окно (без нижней клавиатуры).
+    await reset_keyboard(bot, message.chat.id, main_reply_kb())
+    await show_screen(bot, message.chat.id, MAIN_MENU_TEXT)
 
 
 @router.message(Command("id"))
@@ -47,6 +49,7 @@ async def cmd_id(message: Message) -> None:
 @router.callback_query(F.data == "start_menu")
 async def cb_start_menu(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     # «В меню»/«Назад» убирают текущий экран и показывают приветствие новым
-    # сообщением (единое окно на чат — предыдущее исчезает, а не дублируется).
+    # сообщением (единое окно на чат). Нижняя клавиатура держится на якоре
+    # (см. reset_keyboard на /start), поэтому здесь её вешать не нужно.
     await state.clear()
-    await show_screen(bot, callback.message.chat.id, MAIN_MENU_TEXT, main_reply_kb())
+    await show_screen(bot, callback.message.chat.id, MAIN_MENU_TEXT)
