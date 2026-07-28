@@ -20,10 +20,10 @@ def ask_lana_kb():
 
 
 def personal_work_kb():
-    """Экран «О личной работе». Запись/вопрос в ЛС — в нижней клавиатуре,
-    поэтому здесь только «Отзывы» + возврат в меню (без дублей нижней панели)."""
+    """Экран «О личной работе»: отзывы, запись (CTA) и возврат в меню."""
     builder = InlineKeyboardBuilder()
     builder.button(text="Отзывы", callback_data="consultation_reviews")
+    builder.button(text="Записаться", callback_data="booking_start")
     builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()

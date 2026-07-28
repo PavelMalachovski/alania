@@ -7,8 +7,8 @@ BTN_GAME = "Игра VECHNOST"
 BTN_CHANNEL = "Бесплатный Telegram-канал"
 BTN_QUIZ = "Тест «Кто управляет твоей жизнью?»"
 BTN_MY = "Мои записи"
-BTN_BOOK = "Записаться"
-BTN_ASK = "Вопрос Лане"
+BTN_BOOK = "Записаться на сессию"
+BTN_ASK = "Задать вопрос Лане"
 
 
 def main_reply_kb() -> ReplyKeyboardMarkup:
@@ -16,8 +16,8 @@ def main_reply_kb() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_PERSONAL), KeyboardButton(text=BTN_GAME)],
             [KeyboardButton(text=BTN_CHANNEL), KeyboardButton(text=BTN_QUIZ)],
-            [KeyboardButton(text=BTN_MY), KeyboardButton(text=BTN_BOOK)],
-            [KeyboardButton(text=BTN_ASK)],
+            [KeyboardButton(text=BTN_MY), KeyboardButton(text=BTN_ASK)],
+            [KeyboardButton(text=BTN_BOOK)],
         ],
         resize_keyboard=True,
         is_persistent=True,

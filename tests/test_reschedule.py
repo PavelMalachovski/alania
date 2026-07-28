@@ -142,20 +142,20 @@ async def test_reply_button_during_reason_is_treated_as_reason(env):
     await press(dp, bot, f"resched:{bid}")
     await press(dp, bot, find_cb(session, "resched_day:"))
     await press(dp, bot, find_cb(session, "resched_slot:"))
-    # клиент, будучи в состоянии ввода причины, тапает reply-кнопку «Записаться»
+    # клиент, будучи в состоянии ввода причины, тапает reply-кнопку «Записаться на сессию»
     from aiogram.types import Update, Message, Chat, User as TgUser
     upd = Update(update_id=98, message=Message(
         message_id=4343, date=datetime.now(),
         chat=Chat(id=CLIENT_ID, type="private"),
         from_user=TgUser(id=CLIENT_ID, is_bot=False, first_name="Марина"),
-        text="Записаться"))
+        text="Записаться на сессию"))
     await dp.feed_update(bot, upd)
     # текст кнопки стал причиной → создан pending с этой причиной
     # (reply-хендлер НЕ перехватил, иначе reschedule_status остался бы None)
     async with get_session() as s:
         b = await s.get(Booking, bid)
     assert b.reschedule_status == "pending"
-    assert b.reschedule_reason == "Записаться"
+    assert b.reschedule_reason == "Записаться на сессию"
 
 
 @pytest.mark.asyncio

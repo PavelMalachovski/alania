@@ -22,8 +22,8 @@ async def test_start_sets_reply_keyboard(env):
     kb = sends[-1].get("reply_markup", {})
     assert "keyboard" in kb   # ReplyKeyboardMarkup (не inline_keyboard)
     labels = [b["text"] for row in kb["keyboard"] for b in row]
-    assert "Записаться" in labels and "Мои записи" in labels
-    assert "О личной работе" in labels and "Вопрос Лане" in labels
+    assert "Записаться на сессию" in labels and "Мои записи" in labels
+    assert "О личной работе" in labels and "Задать вопрос Лане" in labels
     assert "🏠 Меню" not in labels   # кнопка «Меню» убрана
 
 
@@ -41,12 +41,31 @@ async def test_start_deletes_previous_menu_window(env):
 
 
 @pytest.mark.asyncio
+async def test_section_edits_menu_in_place_keeps_keyboard_host(env):
+    dp, bot, gcal, session = env
+    import ui
+    ui._last_screen.pop(CLIENT_ID, None)
+    await _send_text(dp, bot, "/start", mid=7200)
+    welcome_id = session._mid                      # окно-хост нижней клавиатуры
+    await _send_text(dp, bot, "О личной работе", mid=7201)
+    # раздел отрисован редактированием окна-хоста (edit-in-place)
+    assert any(n == "EditMessageText" and d.get("message_id") == welcome_id
+               for n, d in session.log)
+    # окно-хост НЕ удалялось → нижняя клавиатура остаётся видимой
+    assert not any(n == "DeleteMessage" and d.get("message_id") == welcome_id
+                   for n, d in session.log)
+
+
+@pytest.mark.asyncio
 async def test_reply_book_opens_calendar_and_deletes_tap(env):
     dp, bot, gcal, session = env
-    await _send_text(dp, bot, "Записаться", mid=7010)
+    import ui
+    ui._last_screen.pop(CLIENT_ID, None)
+    await _send_text(dp, bot, "/start", mid=7009)            # окно-хост с нижней клавиатурой
+    await _send_text(dp, bot, "Записаться на сессию", mid=7010)
     # тап удалён
     assert any(n == "DeleteMessage" and d.get("message_id") == 7010 for n, d in session.log)
-    # показан календарь (есть book_day: или noop в новом сообщении)
-    last = [d for n, d in session.log if n == "SendMessage" and d.get("chat_id") == CLIENT_ID][-1]
-    cbs = [b.get("callback_data", "") for row in last.get("reply_markup", {}).get("inline_keyboard", []) for b in row]
+    # календарь отрисован поверх единого окна (edit-in-place) → EditMessageText
+    edits = [d for n, d in session.log if n == "EditMessageText" and d.get("chat_id") == CLIENT_ID]
+    cbs = [b.get("callback_data", "") for row in edits[-1].get("reply_markup", {}).get("inline_keyboard", []) for b in row]
     assert any(c.startswith("book_day:") for c in cbs) or "noop" in cbs
