@@ -5,9 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Лана Леонович — личная работа и консультации онлайн</title>
 <meta name="description" content="Индивидуальные онлайн-сессии: психосоматика, телесная терапия, коучинг и глубинная психология. 70 минут, видеозвонок.">
+<meta name="theme-color" content="#100C09">
+<link rel="canonical" href="https://alania.vercel.app/">
+
+<!-- Превью при пересылке ссылки. Адреса обязаны быть абсолютными: на
+     относительные мессенджеры не ходят. og.jpg — отдельный кадр 1200×630,
+     а не lana.jpg: тот портретный, и предпросмотр обрезал бы его по центру.
+     Формат jpg, потому что webp собирают в превью не все клиенты. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Лана Леонович">
+<meta property="og:url" content="https://alania.vercel.app/">
+<meta property="og:title" content="Лана Леонович — личная работа и консультации онлайн">
+<meta property="og:description" content="Разговор, после которого видно, где ты сама себя останавливаешь. 70 минут онлайн.">
+<meta property="og:image" content="https://alania.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Лана Леонович">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;800&family=Prata&display=swap" rel="stylesheet">
+
+<!-- Фото в герое — самый крупный элемент первого экрана. Без preload
+     браузер добирается до него только после разбора стилей. -->
+<link rel="preload" as="image" href="assets/lana.webp" type="image/webp" fetchpriority="high">
 <style>
 :root {
   --ink:    #100C09;
