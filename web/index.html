@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;800&family=Prata&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="assets/lana.jpg">
+<link rel="preload" as="image" href="assets/lana.webp" type="image/webp" fetchpriority="high">
 
 <style>
 /* ─────────────────────────────────────────────────────────────
@@ -160,6 +160,11 @@ p:last-child { margin-bottom: 0; }
   .aperture__film { position: absolute; z-index: 0; }
 }
 
+/* Герой — исключение: не окно, а портрет в раме. На холодном трафике
+   лицо должно быть видно целиком, а не полосой. Эффект окна начинается
+   ниже по странице, где читается как находка, а не как обязанность. */
+.hero__aperture .aperture__film { position: absolute; z-index: 0; }
+
 /* ─── Кнопка ─────────────────────────────────────────────── */
 .cta {
   display: inline-flex;
@@ -240,7 +245,7 @@ p:last-child { margin-bottom: 0; }
   gap: clamp(2rem, 5vw, 4rem);
   align-items: center;
 }
-.hero__aperture { aspect-ratio: 4 / 5; --film-pos: 50% 42%; max-height: 74vh; }
+.hero__aperture { aspect-ratio: 4 / 5; --film-pos: 50% 45%; max-height: 74vh; }
 .hero h1 { margin-bottom: 1.4rem; text-wrap: balance; }
 .hero__meta { margin: 1.7rem 0 1.6rem; display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; }
 
@@ -317,20 +322,19 @@ p:last-child { margin-bottom: 0; }
 
 /* ─── Обо мне ────────────────────────────────────────────── */
 .about { background: var(--ember); }
+/* Апертуры здесь нет намеренно: фотография в фокусе только на самой
+   Лане, и любая узкая вырезка по краям кадра давала размытое пятно.
+   Блок держится на типографике — две колонки, слева речь, справа факты. */
 .about__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.32fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.68fr);
   gap: clamp(2rem, 5vw, 4.5rem);
-  align-items: stretch;
+  align-items: start;
 }
-/* Щель — самая цитатная из трёх апертур: ровно тот зазор в полке,
-   через который снят исходный кадр. Верхняя полоса фото. */
-.about__aperture { --film-pos: 50% 24%; min-height: 28rem; }
-.about__body { align-self: center; }
 .about__body h2 { margin-bottom: 1.5rem; }
 .about__text { max-width: var(--measure); color: #D9C9B6; }
 
-.stats { display: flex; flex-wrap: wrap; gap: clamp(1.5rem, 4vw, 3.5rem); margin: 2.2rem 0; }
+.stats { display: flex; flex-wrap: wrap; gap: clamp(1.5rem, 4vw, 3.5rem); margin: 0 0 2.2rem; }
 .stats div { min-width: 7rem; }
 .stats b { display: block; font-family: var(--serif); font-size: clamp(2rem, 3.4vw, 2.9rem); font-weight: 400; color: var(--glow); line-height: 1; }
 .stats span { display: block; margin-top: 0.5rem; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
@@ -435,8 +439,7 @@ p:last-child { margin-bottom: 0; }
 @media (max-width: 900px) {
   .hero__grid, .two-col, .about__grid { grid-template-columns: minmax(0, 1fr); }
   .hero__grid { gap: clamp(1.75rem, 5vw, 2.5rem); }
-  .hero__aperture { aspect-ratio: 5 / 4; max-height: 52vh; --film-pos: 50% 38%; }
-  .about__aperture { min-height: 14rem; --film-pos: 50% 26%; order: -1; margin-bottom: 0.5rem; }
+  .hero__aperture { aspect-ratio: 4 / 5; max-height: 56vh; --film-pos: 50% 40%; }
   .areas { grid-template-columns: minmax(0, 1fr); }
   .voices { column-count: 1; }
   .steps { margin-top: 2.25rem; }
@@ -483,7 +486,10 @@ p:last-child { margin-bottom: 0; }
 
       <div>
         <figure class="aperture hero__aperture" style="margin:0">
-          <img class="aperture__film" src="assets/lana.jpg" alt="Лана Леонович" fetchpriority="high">
+          <picture>
+            <source srcset="assets/lana.webp" type="image/webp">
+            <img class="aperture__film" src="assets/lana.jpg" alt="Лана Леонович" fetchpriority="high">
+          </picture>
         </figure>
 
         <blockquote class="pull">
@@ -591,7 +597,9 @@ p:last-child { margin-bottom: 0; }
               психики и тела — и перестроить не настроение, а действия и логику выбора.
             </p>
           </div>
+        </div>
 
+        <div>
           <div class="stats">
             <div>
               <b data-placeholder>—</b>
@@ -608,10 +616,6 @@ p:last-child { margin-bottom: 0; }
             <li data-placeholder>Обучения и сертификаты: перечислить методы</li>
           </ul>
         </div>
-
-        <figure class="aperture about__aperture" style="margin:0">
-          <img class="aperture__film" src="assets/lana.jpg" alt="" loading="lazy">
-        </figure>
       </div>
     </div>
   </section>
@@ -677,7 +681,10 @@ p:last-child { margin-bottom: 0; }
   <!-- ─── Цена и запись ──────────────────────────────────── -->
   <section class="close section wrap" data-reveal>
     <figure class="aperture close__aperture" style="margin:0">
-      <img class="aperture__film" src="assets/lana.jpg" alt="" loading="lazy">
+      <picture>
+            <source srcset="assets/lana.webp" type="image/webp">
+            <img class="aperture__film" src="assets/lana.jpg" alt="" loading="lazy">
+          </picture>
     </figure>
 
     <div class="close__body">
