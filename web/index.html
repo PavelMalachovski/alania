@@ -342,7 +342,12 @@ p:last-child { margin-bottom: 0; }
 .creds { list-style: none; margin: 0; padding: 0; }
 .creds li { padding: 0.65rem 0; border-top: 1px solid rgba(242,231,216,0.09); color: #C6B5A3; }
 
-/* Заглушки: содержимое, которого ещё нет. В прод не выкатывать. */
+/* hidden должен выигрывать у display, выставленного классами ниже. */
+[hidden] { display: none !important; }
+
+/* Заглушки: содержимое, которого ещё нет. Живут под hidden и на странице
+   не показываются — рамка нужна, чтобы незаполненное было видно сразу,
+   если hidden когда-нибудь снимут раньше времени. */
 [data-placeholder] {
   background: rgba(91,122,122,0.14);
   box-shadow: inset 0 0 0 1px rgba(91,122,122,0.5);
@@ -585,9 +590,11 @@ p:last-child { margin-bottom: 0; }
         <div class="about__body">
           <h2>Лана Леонович</h2>
           <div class="about__text">
-            <!-- ЗАГЛУШКИ: заменить на реальный текст до деплоя.
-                 Ищутся по data-placeholder — их ровно четыре. -->
-            <p>
+            <!-- НЕЗАПОЛНЕННОЕ. Всё, что помечено data-placeholder, скрыто
+                 атрибутом hidden: до прода на странице показывается только
+                 то, что правда есть. Как заполнишь — впиши текст и убери
+                 hidden с этого абзаца. -->
+            <p hidden>
               <span data-placeholder>Здесь — личный абзац: почему я в этой работе
               и что для меня в ней главное. 2–3 предложения от первого лица.</span>
             </p>
@@ -599,7 +606,8 @@ p:last-child { margin-bottom: 0; }
           </div>
         </div>
 
-        <div>
+        <!-- Цифры и образование: заполнить и убрать hidden с этой колонки. -->
+        <div hidden>
           <div class="stats">
             <div>
               <b data-placeholder>—</b>
