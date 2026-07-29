@@ -24,8 +24,13 @@ python -m http.server 4321 --directory web
 
 ## Деплой на Vercel
 
-Новый проект → импорт этого репозитория → **Root Directory: `web`**,
-Framework Preset: Other, команда сборки пустая. Всё остальное по умолчанию.
+vercel.com → Add New → Project → импорт `PavelMalachovski/alania` →
+**Root Directory: `web`**, Framework Preset: Other, команда сборки пустая.
+Остальное по умолчанию.
+
+Заголовки кеширования лежат в `vercel.json` рядом. Фото отдаётся на сутки
+с `stale-while-revalidate`, а не «навсегда»: имя файла не содержит хеша,
+и с immutable замена снимка не доехала бы до тех, кто уже был на странице.
 
 ## Фотография
 
