@@ -1,30 +1,14 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Лана Леонович — личная работа и консультации онлайн</title>
-<meta name="description" content="Индивидуальная терапия в интегративном подходе: психосоматика, телесная терапия, коучинг и глубинная психология. Сессия 70&nbsp;минут онлайн, 100&nbsp;€ / 10&nbsp;000&nbsp;₽. Запись в Telegram.">
-<meta name="theme-color" content="#100C09">
-
-<!-- Превью в мессенджерах: страницу будут кидать ссылкой.
-     Перед деплоем заменить og:url и og:image на абсолютные адреса домена. -->
-<meta property="og:type" content="website">
-<meta property="og:title" content="Лана Леонович — личная работа и консультации онлайн">
-<meta property="og:description" content="Разговор, после которого видно, где ты сама себя останавливаешь. 70&nbsp;минут онлайн.">
-<meta property="og:image" content="assets/lana.jpg">
-<meta property="og:locale" content="ru_RU">
-
+<meta name="description" content="Индивидуальные онлайн-сессии: психосоматика, телесная терапия, коучинг и глубинная психология. 70 минут, видеозвонок.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;800&family=Prata&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="assets/lana.webp" type="image/webp" fetchpriority="high">
-
 <style>
-/* ─────────────────────────────────────────────────────────────
-   Токены. Палитра снята с исходного кадра: ночная комната,
-   вольфрамовый свет, деревянная полка на переднем плане.
-   ───────────────────────────────────────────────────────────── */
 :root {
   --ink:    #100C09;
   --ember:  #1E1611;
@@ -33,20 +17,15 @@
   --linen:  #F2E7D8;
   --ash:    #8A7A6C;
   --slate:  #5B7A7A;
-
   --sans: "Golos Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --serif: "Prata", Georgia, "Times New Roman", serif;
-
   --gutter: clamp(1.25rem, 5vw, 5rem);
   --measure: 34rem;
   --rhythm: clamp(3.5rem, 8vh, 6rem);
 }
-
 *, *::before, *::after { box-sizing: border-box; }
-
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-
 body {
   margin: 0;
   background: var(--ink);
@@ -58,83 +37,25 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
-
 img { max-width: 100%; display: block; }
-
 a { color: inherit; }
-
-:focus-visible {
-  outline: 2px solid var(--slate);
-  outline-offset: 3px;
-  border-radius: 1px;
-}
-
-/* ─── Типографика ─────────────────────────────────────────────
-   Golos Text — голос Ланы и весь интерфейс.
-   Prata — голос клиенток: отзывы и выносная строка в герое.
-   ───────────────────────────────────────────────────────────── */
+a:hover { color: var(--glow); }
+:focus-visible { outline: 2px solid var(--slate); outline-offset: 3px; border-radius: 1px; }
 h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.03em; line-height: 1.06; }
-
 h1 { font-size: clamp(2.15rem, 4.1vw, 3.6rem); letter-spacing: -0.035em; }
 h2 { font-size: clamp(1.8rem, 3.2vw, 2.9rem); }
 h3 { font-size: clamp(1.1rem, 1.6vw, 1.3rem); letter-spacing: -0.02em; line-height: 1.25; }
-
 p { margin: 0 0 1.1em; }
 p:last-child { margin-bottom: 0; }
-
-.lead {
-  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem);
-  line-height: 1.6;
-  color: #D9C9B6;
-  max-width: var(--measure);
-}
-
-.label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--wood);
-  margin: 0 0 1.4rem;
-}
-
-.meta {
-  font-size: 0.74rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ash);
-}
-
+.lead { font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.3rem); line-height: 1.6; color: #D9C9B6; max-width: var(--measure); }
+.label { font-size: 0.72rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--wood); margin: 0 0 1.4rem; }
+.meta { font-size: 0.74rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ash); }
 .serif { font-family: var(--serif); font-weight: 400; letter-spacing: 0; }
-
-/* ─── Раскладка ───────────────────────────────────────────── */
 .wrap { max-width: 78rem; margin-inline: auto; padding-inline: var(--gutter); }
-
 .section { padding-block: var(--rhythm); position: relative; }
-
-/* «Полка»: хайрлайн во всю ширину, на котором сидит подпись секции.
-   Продолжение деревянной планки с фотографии в структуру страницы. */
-.plank {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: clamp(2rem, 4vh, 3.25rem);
-}
+.plank { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; margin-bottom: clamp(2rem, 4vh, 3.25rem); }
 .plank .label { margin: 0; }
-.plank::after {
-  content: "";
-  height: 1px;
-  background: linear-gradient(90deg, rgba(184,131,78,0.55), rgba(184,131,78,0.06));
-}
-
-/* ─── Апертуры ────────────────────────────────────────────────
-   Фото — один слой, приколоченный к вьюпорту (position: fixed).
-   Апертура клиппит его через clip-path, поэтому при прокрутке
-   в каждом окне виден свой фрагмент одного и того же кадра.
-   Градиент под фото — осмысленная заглушка, если файла нет.
-   ───────────────────────────────────────────────────────────── */
+.plank::after { content: ""; height: 1px; background: linear-gradient(90deg, rgba(184,131,78,0.55), rgba(184,131,78,0.06)); }
 .aperture {
   position: relative;
   overflow: hidden;
@@ -144,303 +65,112 @@ p:last-child { margin-bottom: 0; }
     linear-gradient(160deg, #2A1E14, #120D09 70%);
   border: 1px solid rgba(184,131,78,0.28);
 }
-
-.aperture__film {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: var(--film-pos, center 26%);
-  z-index: -1;
-}
-
-/* Без clip-path эффект окна невозможен — кадр просто ложится в рамку. */
-@supports not (clip-path: inset(0)) {
-  .aperture__film { position: absolute; z-index: 0; }
-}
-
-/* Герой — исключение: не окно, а портрет в раме. На холодном трафике
-   лицо должно быть видно целиком, а не полосой. Эффект окна начинается
-   ниже по странице, где читается как находка, а не как обязанность. */
+.aperture__film { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--film-pos, center 26%); z-index: -1; }
+@supports not (clip-path: inset(0)) { .aperture__film { position: absolute; z-index: 0; } }
 .hero__aperture .aperture__film { position: absolute; z-index: 0; }
-
-/* ─── Кнопка ─────────────────────────────────────────────── */
 .cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 1.05rem 1.9rem;
-  background: var(--glow);
-  color: #1A1109;
-  font-weight: 600;
-  font-size: 1.02rem;
-  letter-spacing: -0.01em;
-  text-decoration: none;
-  border-radius: 2px;
+  display: inline-flex; align-items: center; gap: 0.7rem;
+  padding: 1.05rem 1.9rem; background: var(--glow); color: #1A1109;
+  font-weight: 600; font-size: 1.02rem; letter-spacing: -0.01em;
+  text-decoration: none; border-radius: 2px; border: none; cursor: pointer; font-family: inherit;
   transition: background 0.25s ease, transform 0.25s ease;
 }
-.cta:hover { background: #F3CE9B; transform: translateY(-1px); }
+.cta:hover { background: #F3CE9B; color: #1A1109; transform: translateY(-1px); }
 .cta__arrow { transition: transform 0.25s ease; }
 .cta:hover .cta__arrow { transform: translateX(3px); }
-
-.cta-note {
-  margin: 0.95rem 0 0;
-  font-size: 0.92rem;
-  line-height: 1.55;
-  color: var(--ash);
-  max-width: 26rem;
-}
-
-.link-quiet {
-  color: var(--glow);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(232,184,124,0.35);
-  transition: border-color 0.2s ease;
-}
+.cta-note { margin: 0.95rem 0 0; font-size: 0.92rem; line-height: 1.55; color: var(--ash); max-width: 26rem; }
+.link-quiet { color: var(--glow); text-decoration: none; border-bottom: 1px solid rgba(232,184,124,0.35); transition: border-color 0.2s ease; background: none; border-top: none; border-left: none; border-right: none; padding: 0; font-family: inherit; font-size: inherit; line-height: inherit; cursor: pointer; }
 .link-quiet:hover { border-bottom-color: var(--glow); }
-
-@media (prefers-reduced-motion: reduce) {
-  .cta, .cta__arrow { transition: none; }
-  .cta:hover { transform: none; }
-}
-
-/* ─── Шапка ──────────────────────────────────────────────── */
+.link-mute { background: none; border: none; padding: 0; color: var(--ash); font-family: inherit; font-size: 0.92rem; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .cta, .cta__arrow { transition: none; } .cta:hover { transform: none; } }
 .topbar {
-  position: fixed;
-  inset: 0 0 auto;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  position: fixed; inset: 0 0 auto; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: 0.85rem var(--gutter);
-  background: rgba(16,12,9,0.86);
-  backdrop-filter: blur(10px);
+  background: rgba(16,12,9,0.86); backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(184,131,78,0.18);
-  transform: translateY(-100%);
-  transition: transform 0.4s ease;
+  transform: translateY(-100%); transition: transform 0.4s ease;
 }
 .topbar.is-visible { transform: translateY(0); }
-.topbar__name {
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--linen);
-  text-decoration: none;
-}
+.topbar__name { font-size: 0.78rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--linen); text-decoration: none; }
 .topbar .cta { padding: 0.6rem 1.15rem; font-size: 0.88rem; }
-
 @media (prefers-reduced-motion: reduce) { .topbar { transition: none; } }
-
-/* ─── Герой ──────────────────────────────────────────────────
-   Фотография портретная: по ширине у плёнки запаса нет, поэтому
-   апертура должна стоять там, где в кадре сама Лана — справа.
-   ───────────────────────────────────────────────────────────── */
 .hero { padding-block: clamp(3.25rem, 6vh, 5rem) var(--rhythm); }
-.hero__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
-  gap: clamp(2rem, 5vw, 4rem);
-  align-items: center;
-}
+.hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
 .hero__aperture { aspect-ratio: 4 / 5; --film-pos: 50% 45%; max-height: 74vh; }
 .hero h1 { margin-bottom: 1.4rem; text-wrap: balance; }
 .hero__meta { margin: 1.7rem 0 1.6rem; display: flex; flex-wrap: wrap; gap: 0.4rem 0.9rem; }
-
-.pull {
-  margin-top: 1.75rem;
-  padding-top: 1.3rem;
-  border-top: 1px solid rgba(184,131,78,0.25);
-}
-.pull q {
-  font-family: var(--serif);
-  font-size: clamp(1.05rem, 1.3vw, 1.22rem);
-  line-height: 1.5;
-  color: var(--linen);
-  quotes: "«" "»";
-}
+.pull { margin-top: 1.75rem; padding-top: 1.3rem; border-top: 1px solid rgba(184,131,78,0.25); margin-inline: 0; }
+.pull q { font-family: var(--serif); font-size: clamp(1.05rem, 1.3vw, 1.22rem); line-height: 1.5; color: var(--linen); quotes: "«" "»"; }
 .pull cite { display: block; margin-top: 0.7rem; font-style: normal; font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
-
-/* ─── С чем приходят ─────────────────────────────────────── */
-.areas {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(1.5rem, 3vw, 3rem);
-  margin-top: clamp(2.5rem, 5vh, 3.5rem);
-}
+.areas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1.5rem, 3vw, 3rem); margin-top: clamp(2.5rem, 5vh, 3.5rem); }
 .area h3 { margin-bottom: 1.2rem; color: var(--linen); }
 .area ul { list-style: none; margin: 0; padding: 0; }
-.area li {
-  padding: 0.7rem 0;
-  border-top: 1px solid rgba(242,231,216,0.09);
-  color: #C6B5A3;
-  line-height: 1.45;
-}
-
-/* ─── Как проходит ───────────────────────────────────────── */
-.two-col {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
-  gap: clamp(2rem, 5vw, 4.5rem);
-  align-items: start;
-}
+.area li { padding: 0.7rem 0; border-top: 1px solid rgba(242,231,216,0.09); color: #C6B5A3; line-height: 1.45; }
+.two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: start; }
 .facts { margin: 0; }
-.facts div {
-  display: grid;
-  grid-template-columns: 9.5rem 1fr;
-  gap: 1rem;
-  padding: 0.85rem 0;
-  border-top: 1px solid rgba(242,231,216,0.09);
-}
+.facts div { display: grid; grid-template-columns: 9.5rem 1fr; gap: 1rem; padding: 0.85rem 0; border-top: 1px solid rgba(242,231,216,0.09); }
 .facts dt { color: var(--ash); font-size: 0.88rem; letter-spacing: 0.02em; padding-top: 0.15rem; }
 .facts dd { margin: 0; color: var(--linen); }
-
-/* Запись — единственная настоящая последовательность на странице,
-   поэтому здесь нумерация несёт смысл, а не украшает. */
 .steps { list-style: none; margin: clamp(2.5rem, 5vh, 3.5rem) 0 0; padding: 0; counter-reset: step; }
-.steps li {
-  counter-increment: step;
-  display: grid;
-  grid-template-columns: 2.2rem 1fr;
-  gap: 1rem;
-  padding: 1.15rem 0;
-  border-top: 1px solid rgba(184,131,78,0.22);
-}
-.steps li::before {
-  content: counter(step);
-  font-size: 0.82rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--wood);
-  padding-top: 0.28rem;
-}
-/* strong и span оба во второй колонке: иначе span падает под номер. */
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.2rem 1fr; gap: 1rem; padding: 1.15rem 0; border-top: 1px solid rgba(184,131,78,0.22); }
+.steps li::before { content: counter(step); font-size: 0.82rem; font-weight: 500; letter-spacing: 0.1em; color: var(--wood); padding-top: 0.28rem; }
 .steps strong { grid-column: 2; font-weight: 600; color: var(--linen); margin-bottom: 0.15rem; }
 .steps span { grid-column: 2; color: #C6B5A3; font-size: 0.97rem; line-height: 1.55; max-width: 42rem; }
-
-/* ─── Обо мне ────────────────────────────────────────────── */
 .about { background: var(--ember); }
-/* Апертуры здесь нет намеренно: фотография в фокусе только на самой
-   Лане, и любая узкая вырезка по краям кадра давала размытое пятно.
-   Блок держится на типографике — две колонки, слева речь, справа факты. */
-.about__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.68fr);
-  gap: clamp(2rem, 5vw, 4.5rem);
-  align-items: start;
-}
+.about__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.68fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: start; }
 .about__body h2 { margin-bottom: 1.5rem; }
 .about__text { max-width: var(--measure); color: #D9C9B6; }
-
 .stats { display: flex; flex-wrap: wrap; gap: clamp(1.5rem, 4vw, 3.5rem); margin: 0 0 2.2rem; }
 .stats div { min-width: 7rem; }
 .stats b { display: block; font-family: var(--serif); font-size: clamp(2rem, 3.4vw, 2.9rem); font-weight: 400; color: var(--glow); line-height: 1; }
 .stats span { display: block; margin-top: 0.5rem; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ash); }
-
 .creds { list-style: none; margin: 0; padding: 0; }
 .creds li { padding: 0.65rem 0; border-top: 1px solid rgba(242,231,216,0.09); color: #C6B5A3; }
-
-/* hidden должен выигрывать у display, выставленного классами ниже. */
 [hidden] { display: none !important; }
-
-/* Заглушки: содержимое, которого ещё нет. Живут под hidden и на странице
-   не показываются — рамка нужна, чтобы незаполненное было видно сразу,
-   если hidden когда-нибудь снимут раньше времени. */
-[data-placeholder] {
-  background: rgba(91,122,122,0.14);
-  box-shadow: inset 0 0 0 1px rgba(91,122,122,0.5);
-  border-radius: 2px;
-  padding: 0 0.3em;
-}
-
-/* ─── Голоса ─────────────────────────────────────────────── */
+[data-placeholder] { background: rgba(91,122,122,0.14); box-shadow: inset 0 0 0 1px rgba(91,122,122,0.5); border-radius: 2px; padding: 0 0.3em; }
 .voices { column-count: 2; column-gap: clamp(1.5rem, 3vw, 3rem); margin-top: clamp(2.5rem, 5vh, 3.5rem); }
-.voice {
-  break-inside: avoid;
-  margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
-  padding: clamp(1.4rem, 2.5vw, 2rem);
-  background: var(--ember);
-  border-left: 1px solid rgba(184,131,78,0.4);
-}
-.voice p {
-  font-family: var(--serif);
-  font-size: clamp(1rem, 1.15vw, 1.14rem);
-  line-height: 1.62;
-  color: var(--linen);
-}
+.voice { break-inside: avoid; margin: 0 0 clamp(1.5rem, 3vw, 2.5rem); padding: clamp(1.4rem, 2.5vw, 2rem); background: var(--ember); border-left: 1px solid rgba(184,131,78,0.4); }
+.voice p { font-family: var(--serif); font-size: clamp(1rem, 1.15vw, 1.14rem); line-height: 1.62; color: var(--linen); }
 .voice footer { margin-top: 1.1rem; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash); }
-
-/* ─── Цена и запись ──────────────────────────────────────── */
-.close__aperture {
-  --film-pos: 50% 74%;
-  aspect-ratio: 21 / 9;
-  margin-bottom: clamp(2.5rem, 5vh, 3.5rem);
-}
+.quiz-box { max-width: 46rem; margin-top: clamp(2rem, 4vh, 3rem); }
+.quiz-q { font-size: clamp(1.2rem, 2vw, 1.5rem); line-height: 1.35; text-wrap: pretty; }
+.quiz-track { height: 2px; background: rgba(242,231,216,0.09); margin: 0.9rem 0 1.8rem; }
+.quiz-bar { height: 2px; background: var(--wood); width: 0; transition: width 0.3s ease; }
+.quiz-opt { display: block; width: 100%; text-align: left; background: none; border: none; border-top: 1px solid rgba(242,231,216,0.12); padding: 1rem 0.75rem; color: #C6B5A3; font-family: inherit; font-size: 0.98rem; line-height: 1.5; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+.quiz-opt:hover { color: var(--linen); background: rgba(184,131,78,0.08); }
+.quiz-nav { display: flex; gap: 1.75rem; margin-top: 1.75rem; }
+.quiz-back { background: none; border: none; padding: 0; color: var(--glow); font-family: inherit; font-size: 0.92rem; cursor: pointer; border-bottom: 1px solid rgba(232,184,124,0.35); }
+.quiz-score { font-family: var(--serif); font-size: clamp(2.2rem, 3.8vw, 3.2rem); color: var(--glow); margin: 0.9rem 0 0.5rem; line-height: 1; }
+.quiz-title { font-size: clamp(1.25rem, 2.1vw, 1.6rem); }
+.quiz-body { color: #D9C9B6; margin-top: 1.3rem; max-width: 40rem; }
+.price-reveal { font-size: clamp(1.5rem, 2.4vw, 2rem); color: var(--glow); font-family: var(--serif); }
+.close__aperture { --film-pos: 50% 74%; aspect-ratio: 21 / 9; margin-bottom: clamp(2.5rem, 5vh, 3.5rem); }
 .close__body { max-width: 40rem; }
 .close h2 { margin-bottom: 1.3rem; }
 .close .cta { margin-top: 2rem; }
-
-/* ─── Вопросы ────────────────────────────────────────────── */
 .faq { max-width: 46rem; margin-top: clamp(2rem, 4vh, 3rem); }
 .faq details { border-top: 1px solid rgba(242,231,216,0.11); }
 .faq details:last-of-type { border-bottom: 1px solid rgba(242,231,216,0.11); }
-.faq summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 1.15rem 0;
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--linen);
-  list-style: none;
-}
+.faq summary { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; padding: 1.15rem 0; cursor: pointer; font-weight: 500; color: var(--linen); list-style: none; }
 .faq summary::-webkit-details-marker { display: none; }
 .faq summary::after { content: "+"; color: var(--wood); font-size: 1.3rem; line-height: 1; flex: none; }
 .faq details[open] summary::after { content: "–"; }
 .faq p { padding-bottom: 1.25rem; color: #C6B5A3; max-width: 40rem; }
-
-/* ─── Подвал ─────────────────────────────────────────────── */
 .foot { background: var(--ember); padding-block: var(--rhythm) clamp(2.5rem, 5vh, 4rem); }
 .foot h2 { margin-bottom: 1.2rem; }
 .foot__doors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.25rem, 2.5vw, 2rem); margin-top: clamp(2rem, 4vh, 3rem); }
-.door {
-  display: block;
-  padding: clamp(1.4rem, 2.5vw, 1.9rem);
-  border: 1px solid rgba(184,131,78,0.28);
-  text-decoration: none;
-  transition: border-color 0.25s ease, background 0.25s ease;
-}
-.door:hover { border-color: rgba(184,131,78,0.7); background: rgba(184,131,78,0.06); }
+.door { display: block; padding: clamp(1.4rem, 2.5vw, 1.9rem); border: 1px solid rgba(184,131,78,0.28); text-decoration: none; transition: border-color 0.25s ease, background 0.25s ease; }
+.door:hover { border-color: rgba(184,131,78,0.7); background: rgba(184,131,78,0.06); color: inherit; }
 .door h3 { margin-bottom: 0.5rem; }
 .door p { color: var(--ash); font-size: 0.95rem; line-height: 1.5; }
-
-.foot__end {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 1rem 2rem;
-  margin-top: clamp(3rem, 6vh, 4.5rem);
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(242,231,216,0.1);
-  font-size: 0.88rem;
-  color: var(--ash);
-}
+.foot__end { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 2rem; margin-top: clamp(3rem, 6vh, 4.5rem); padding-top: 1.5rem; border-top: 1px solid rgba(242,231,216,0.1); font-size: 0.88rem; color: var(--ash); }
 .foot__end a { color: var(--ash); text-decoration: none; border-bottom: 1px solid rgba(138,122,108,0.4); }
 .foot__end a:hover { color: var(--linen); }
-
 @media (prefers-reduced-motion: reduce) { .door { transition: none; } }
-
-/* ─── Проявление секций ──────────────────────────────────── */
 [data-reveal] { opacity: 0; transform: translateY(8px); transition: opacity 0.7s ease, transform 0.7s ease; }
 [data-reveal].is-in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  [data-reveal] { opacity: 1; transform: none; transition: none; }
-}
-
-/* ─── Адаптив ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; transition: none; } }
 @media (max-width: 900px) {
   .hero__grid, .two-col, .about__grid { grid-template-columns: minmax(0, 1fr); }
   .hero__grid { gap: clamp(1.75rem, 5vw, 2.5rem); }
@@ -449,7 +179,6 @@ p:last-child { margin-bottom: 0; }
   .voices { column-count: 1; }
   .steps { margin-top: 2.25rem; }
 }
-
 @media (max-width: 560px) {
   .facts div { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
   .foot__doors { grid-template-columns: minmax(0, 1fr); }
@@ -467,7 +196,6 @@ p:last-child { margin-bottom: 0; }
 
 <main id="top">
 
-  <!-- ─── Герой ──────────────────────────────────────────── -->
   <section class="hero section wrap">
     <div class="hero__grid">
       <div>
@@ -478,17 +206,14 @@ p:last-child { margin-bottom: 0; }
           и глубинная психология. За 70&nbsp;минут мы разбираем не симптом, а логику,
           по которой ты принимаешь решения.
         </p>
-
         <p class="meta hero__meta">
-          <span>70&nbsp;минут</span><span>·</span><span>видеозвонок</span><span>·</span><span>100&nbsp;€ / 10&nbsp;000&nbsp;₽</span>
+          <span>70&nbsp;минут</span><span>·</span><span>видеозвонок</span><span>·</span><span>онлайн</span>
         </p>
-
         <a class="cta" href="https://t.me/alania_sky_bot?start=site">
           Записаться на сессию <span class="cta__arrow" aria-hidden="true">→</span>
         </a>
         <p class="cta-note">Свободное время и оплата — в Telegram-боте. Занимает пару минут.</p>
       </div>
-
       <div>
         <figure class="aperture hero__aperture" style="margin:0">
           <picture>
@@ -496,7 +221,6 @@ p:last-child { margin-bottom: 0; }
             <img class="aperture__film" src="assets/lana.jpg" alt="Лана Леонович" fetchpriority="high">
           </picture>
         </figure>
-
         <blockquote class="pull">
           <q>Пришла в полном раздрае, а ушла с ощущением спокойствия, доверия себе
           и уверенности, что я со всем справлюсь</q>
@@ -506,47 +230,27 @@ p:last-child { margin-bottom: 0; }
     </div>
   </section>
 
-  <!-- ─── С чем приходят ─────────────────────────────────── -->
   <section class="section wrap" data-reveal>
     <div class="plank"><p class="label">С чем приходят</p></div>
     <h2>Три области, в которых чаще всего заедает</h2>
-
     <div class="areas">
       <div class="area">
         <h3>Отношения с собой</h3>
-        <ul>
-          <li>Тревога</li>
-          <li>Вина</li>
-          <li>Самооценка</li>
-          <li>Поиск себя</li>
-          <li>Проявленность</li>
-        </ul>
+        <ul><li>Тревога</li><li>Вина</li><li>Самооценка</li><li>Поиск себя</li><li>Проявленность</li></ul>
       </div>
       <div class="area">
         <h3>Отношения с другими</h3>
-        <ul>
-          <li>Границы</li>
-          <li>Сепарация</li>
-          <li>Кризисы в отношениях</li>
-          <li>Разрывы</li>
-        </ul>
+        <ul><li>Границы</li><li>Сепарация</li><li>Кризисы в отношениях</li><li>Разрывы</li></ul>
       </div>
       <div class="area">
         <h3>Реализация</h3>
-        <ul>
-          <li>Деньги</li>
-          <li>Выгорание</li>
-          <li>Тупик в карьере</li>
-          <li>Смена вектора жизни</li>
-        </ul>
+        <ul><li>Деньги</li><li>Выгорание</li><li>Тупик в карьере</li><li>Смена вектора жизни</li></ul>
       </div>
     </div>
   </section>
 
-  <!-- ─── Как проходит ───────────────────────────────────── -->
   <section class="section wrap" data-reveal>
     <div class="plank"><p class="label">Как проходит</p></div>
-
     <div class="two-col">
       <div>
         <h2>70&nbsp;минут, в которые помещается больше, чем кажется</h2>
@@ -556,15 +260,13 @@ p:last-child { margin-bottom: 0; }
           делать в ближайшие недели.
         </p>
       </div>
-
       <dl class="facts">
         <div><dt>Длительность</dt><dd>70&nbsp;минут</dd></div>
         <div><dt>Формат</dt><dd>Онлайн, видеозвонок</dd></div>
-        <div><dt>Стоимость</dt><dd>100&nbsp;€ / 10&nbsp;000&nbsp;₽</dd></div>
+        <div><dt>Стоимость</dt><dd><button class="link-quiet" type="button" data-price-btn>Узнать стоимость</button><span data-price hidden>100&nbsp;€ / 10&nbsp;000&nbsp;₽</span></dd></div>
         <div><dt>Оплата</dt><dd>Рублями или евро, перед сессией</dd></div>
       </dl>
     </div>
-
     <ol class="steps">
       <li>
         <strong>Выбираешь время</strong>
@@ -581,19 +283,13 @@ p:last-child { margin-bottom: 0; }
     </ol>
   </section>
 
-  <!-- ─── Обо мне ────────────────────────────────────────── -->
   <section class="about section" data-reveal>
     <div class="wrap">
       <div class="plank"><p class="label">Обо мне</p></div>
-
       <div class="about__grid">
         <div class="about__body">
           <h2>Лана Леонович</h2>
           <div class="about__text">
-            <!-- НЕЗАПОЛНЕННОЕ. Всё, что помечено data-placeholder, скрыто
-                 атрибутом hidden: до прода на странице показывается только
-                 то, что правда есть. Как заполнишь — впиши текст и убери
-                 hidden с этого абзаца. -->
             <p hidden>
               <span data-placeholder>Здесь — личный абзац: почему я в этой работе
               и что для меня в ней главное. 2–3 предложения от первого лица.</span>
@@ -605,20 +301,11 @@ p:last-child { margin-bottom: 0; }
             </p>
           </div>
         </div>
-
-        <!-- Цифры и образование: заполнить и убрать hidden с этой колонки. -->
         <div hidden>
           <div class="stats">
-            <div>
-              <b data-placeholder>—</b>
-              <span>лет практики</span>
-            </div>
-            <div>
-              <b data-placeholder>—</b>
-              <span>проведённых сессий</span>
-            </div>
+            <div><b data-placeholder>—</b><span>лет практики</span></div>
+            <div><b data-placeholder>—</b><span>проведённых сессий</span></div>
           </div>
-
           <ul class="creds">
             <li data-placeholder>Образование: название вуза и специальность</li>
             <li data-placeholder>Обучения и сертификаты: перечислить методы</li>
@@ -628,11 +315,9 @@ p:last-child { margin-bottom: 0; }
     </div>
   </section>
 
-  <!-- ─── Голоса ─────────────────────────────────────────── -->
   <section class="section wrap" data-reveal>
     <div class="plank"><p class="label">Голоса</p></div>
     <h2>Что говорят после сессии</h2>
-
     <div class="voices">
       <figure class="voice">
         <p>Я пришла с запросом про отношения, который мучил меня годами. Мы не только
@@ -642,14 +327,12 @@ p:last-child { margin-bottom: 0; }
         и нашёл все ответы, только здесь это происходит за одну сессию.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>За одну сессию я как будто выдохнула то, что не могла решить годами.
         Смогла увидеть, где сама себя блокирую в деньгах. И буквально на следующий
         день пришёл клиент, который молчал два месяца.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>До начала сессии у меня был сумбур в голове и не было конкретного запроса.
         Мне понравилось, что в ходе сессии мы смогли сжать его до одного конкретного.
@@ -657,26 +340,22 @@ p:last-child { margin-bottom: 0; }
         Всё было по делу, и благодаря этому я смогла расслабиться.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>Простыми смыслами, тонким чувствованием мы смогли собрать недостающие
         паззлы и найти ключи к решению моей ситуации. Вовремя сказанные слова
         попадают в самое сердце и сажают семена, которые будут прорастать.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>Благодаря сессии я увидела карту, по которой мне идти, при этом бережно
         относясь к своему состоянию.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>Каждое твоё слово записала — именно то, что мне нужно было услышать,
         то, что вернуло меня к себе. Буду возвращаться.</p>
         <footer>Клиентка</footer>
       </figure>
-
       <figure class="voice">
         <p>Точно мои ощущения описали. Чувствую, что есть огонь внутри, но как и куда
         направить — затык. Однако мне всё чаще стали попадаться очень нужные
@@ -686,20 +365,62 @@ p:last-child { margin-bottom: 0; }
     </div>
   </section>
 
-  <!-- ─── Цена и запись ──────────────────────────────────── -->
+  <section class="section wrap" data-reveal id="quiz">
+    <div class="plank"><p class="label">Тест · 2 минуты</p></div>
+    <h2>Кто управляет твоей жизнью?</h2>
+    <div class="quiz-box" id="quiz-box">
+      <div data-quiz-intro>
+        <p class="lead">15 вопросов про автономию, сценарии мышления и скрытые ресурсы.
+        Две диагностические зоны: ☾ тени — скрытые утечки ресурса и сценарные блоки,
+        и ★ активы — твой потенциал, интуиция и опора. В конце — срез твоего состояния
+        и понятная стратегия, что с ним делать.</p>
+        <p style="margin-top:1.8rem">
+          <button class="cta" type="button" data-quiz-start>Начать тест <span class="cta__arrow" aria-hidden="true">→</span></button>
+        </p>
+        <p class="cta-note">Без регистрации и почты. Результат — сразу на этой странице.</p>
+      </div>
+      <div data-quiz-ask hidden>
+        <p class="meta">Вопрос <span data-quiz-num>1</span> из 15</p>
+        <div class="quiz-track"><div class="quiz-bar" data-quiz-bar></div></div>
+        <h3 class="quiz-q" data-quiz-text></h3>
+        <div data-quiz-options style="margin-top:1.6rem"></div>
+        <div class="quiz-nav">
+          <button class="quiz-back" type="button" data-quiz-back hidden>⇦ Назад</button>
+          <button class="link-mute" type="button" data-quiz-reset>✕ Прервать</button>
+        </div>
+      </div>
+      <div data-quiz-result hidden>
+        <p class="meta">Твой результат</p>
+        <p class="quiz-score"><span data-quiz-score></span> / 60</p>
+        <h3 class="quiz-title" data-quiz-title></h3>
+        <p class="quiz-body" data-quiz-body></p>
+        <p class="quiz-body"><strong style="color:var(--linen)">Что дальше?</strong> Если хочешь объёмно разобрать результат и убрать то,
+        что тормозит, — на индивидуальной сессии мы проработаем сценарные блоки
+        и переведём сомнения в устойчивую внутреннюю опору.</p>
+        <p style="margin-top:1.8rem">
+          <a class="cta" href="https://t.me/alania_sky_bot?start=quiz_result">Записаться на сессию <span class="cta__arrow" aria-hidden="true">→</span></a>
+        </p>
+        <p class="cta-note"><button class="link-mute" type="button" data-quiz-reset style="border-bottom:1px solid rgba(138,122,108,0.4)">Пройти заново</button></p>
+      </div>
+    </div>
+  </section>
+
   <section class="close section wrap" data-reveal>
     <figure class="aperture close__aperture" style="margin:0">
       <picture>
-            <source srcset="assets/lana.webp" type="image/webp">
-            <img class="aperture__film" src="assets/lana.jpg" alt="" loading="lazy">
-          </picture>
+        <source srcset="assets/lana.webp" type="image/webp">
+        <img class="aperture__film" src="assets/lana.jpg" alt="" loading="lazy">
+      </picture>
     </figure>
-
     <div class="close__body">
-      <h2>Одна сессия — 100&nbsp;€ или 10&nbsp;000&nbsp;₽</h2>
+      <h2>Одна сессия. 70&nbsp;минут онлайн</h2>
       <p class="lead">
-        70&nbsp;минут онлайн. Время выбираешь сама из свободных слотов, оплата — рублями
+        Время выбираешь сама из свободных слотов, оплата — рублями
         или евро, перед сессией.
+      </p>
+      <p style="margin-top:1.4rem">
+        <button class="link-quiet" type="button" data-price-btn style="font-size:1.02rem">Узнать стоимость</button>
+        <span class="price-reveal" data-price hidden>100&nbsp;€ / 10&nbsp;000&nbsp;₽</span>
       </p>
       <a class="cta" href="https://t.me/alania_sky_bot?start=site">
         Записаться на сессию <span class="cta__arrow" aria-hidden="true">→</span>
@@ -711,41 +432,34 @@ p:last-child { margin-bottom: 0; }
     </div>
   </section>
 
-  <!-- ─── Вопросы ────────────────────────────────────────── -->
   <section class="section wrap" data-reveal>
     <div class="plank"><p class="label">Вопросы</p></div>
-
     <div class="faq">
       <details>
         <summary>Как выбрать время?</summary>
         <p>В боте открывается календарь, где активны только дни со свободными слотами.
         Выбираешь день, потом время — и слот сразу закрепляется за тобой.</p>
       </details>
-
       <details>
         <summary>В каком часовом поясе указано время?</summary>
         <p>Лана в Праге, поэтому основное время — пражское. Рядом с каждым слотом
         бот всегда показывает московское, чтобы не пришлось считать в уме.</p>
       </details>
-
       <details>
         <summary>Как оплатить?</summary>
         <p>После выбора слота бот даёт две ссылки — рублями или евро. Оплачиваешь,
         нажимаешь «Я оплатил(а)», Лана подтверждает, и запись становится финальной.</p>
       </details>
-
       <details>
         <summary>Можно ли перенести сессию?</summary>
         <p>Да. Если до начала больше суток — перенос делается в боте сам, за два касания.
         Если меньше, бот спросит причину и передаст Лане: она согласует новое время.</p>
       </details>
-
       <details>
         <summary>А если формат мне не подойдёт?</summary>
         <p>Напиши Лане в личку до записи и опиши свой запрос. Если работа не про твою
         ситуацию, она скажет об этом прямо и подскажет, куда лучше пойти.</p>
       </details>
-
       <details>
         <summary>Это конфиденциально?</summary>
         <p>Да. Всё, что происходит на сессии, остаётся между вами. Сессии не
@@ -754,26 +468,22 @@ p:last-child { margin-bottom: 0; }
     </div>
   </section>
 
-  <!-- ─── Подвал ─────────────────────────────────────────── -->
   <section class="foot" data-reveal>
     <div class="wrap">
       <h2>Не готова записываться сегодня?</h2>
       <p class="lead">Тогда начни с малого — обе двери ведут в того же бота.</p>
-
       <div class="foot__doors">
-        <a class="door" href="https://t.me/alania_sky_bot?start=quiz">
+        <a class="door" href="#quiz">
           <h3>Тест «Кто управляет твоей жизнью?»</h3>
           <p>15 вопросов про автономию, сценарии мышления и скрытые ресурсы.
-          В конце — разбор твоего состояния и что с ним делать.</p>
+          Проходится прямо на этой странице — результат сразу.</p>
         </a>
-
         <a class="door" href="https://t.me/alania_sky_bot?start=channel">
           <h3>Бесплатный Telegram-канал</h3>
           <p>Психология, подкасты и практики. Материалы, которые дают ответы
           раньше, чем появляются вопросы.</p>
         </a>
       </div>
-
       <div class="foot__end">
         <span>Лана Леонович · личная работа онлайн</span>
         <span>
@@ -790,7 +500,7 @@ p:last-child { margin-bottom: 0; }
 (function () {
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Шапка проявляется, когда герой ушёл за верхний край.
+  // Topbar
   var hero = document.querySelector('.hero');
   var topbar = document.getElementById('topbar');
   if (hero && topbar && 'IntersectionObserver' in window) {
@@ -799,23 +509,159 @@ p:last-child { margin-bottom: 0; }
     }, { rootMargin: '-90% 0px 0px 0px' }).observe(hero);
   }
 
-  // Проявление секций. При reduced-motion CSS уже показал всё — не трогаем.
+  // Reveal on scroll
   var targets = document.querySelectorAll('[data-reveal]');
   if (reduced || !('IntersectionObserver' in window)) {
     targets.forEach(function (el) { el.classList.add('is-in'); });
-    return;
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { entry.target.classList.add('is-in'); io.unobserve(entry.target); }
+      });
+    }, { rootMargin: '0px 0px -12% 0px' });
+    targets.forEach(function (el) { io.observe(el); });
   }
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-in');
-        io.unobserve(entry.target);
-      }
+
+  // Price reveal
+  document.querySelectorAll('[data-price-btn]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('[data-price-btn]').forEach(function (b) { b.hidden = true; });
+      document.querySelectorAll('[data-price]').forEach(function (p) { p.hidden = false; });
     });
-  }, { rootMargin: '0px 0px -12% 0px' });
-  targets.forEach(function (el) { io.observe(el); });
+  });
+
+  // Quiz — вопросы из quiz_data.py
+  var QUESTIONS = [
+    { t: "Когда перед тобой стоит выбор, который может кардинально изменить жизнь, на что ты опираешься в первую очередь?",
+      o: [["Прислушиваюсь к мнениям, но принимаю решение сам/а, даже если столкнусь с чужим недовольством.", 3],
+          ["Испытываю неприятные чувства тревоги и паники. Стараюсь найти авторитетное мнение и советы извне, потому что боюсь ошибиться.", 1],
+          ["Опираюсь на свои ценности, внутреннюю устойчивость, собственный анализ и представления о жизни, не обращая внимания на чужие слова и ожидания.", 4],
+          ["Пытаюсь нащупать свои желания, но если близкие не одобрят — скорее всего уступлю и прислушаюсь к их мнению.", 2]] },
+    { t: "Что ты чувствуешь, когда совершаешь ошибку или терпишь неудачу?",
+      o: [["Осуждаю себя за недостаточную подготовленность. Неделями кручу в голове, как «надо было сделать».", 2],
+          ["Забираю опыт и силу из этого опыта. Ошибку воспринимаю как обратную связь: делаю выводы и двигаюсь дальше, не зацикливаясь.", 4],
+          ["Испытываю стыд и чувство никчёмности, кажется, со мной «что-то не так», что у меня снова не получилось.", 1],
+          ["Мне неприятно, но я быстро перевожу фокус на анализ: какой опыт извлекаю и как действовать дальше, вскоре переходя к новым попыткам.", 3]] },
+    { t: "Ты в полном одиночестве, в абсолютной тишине, без телефона и работы. Какое у тебя состояние?",
+      o: [["Спокойствие и контакт с собой. Восстанавливаюсь в тишине, иногда записываю новые идеи, но больше просто наслаждаюсь временем с собой.", 4],
+          ["Накатывает фоновая тревога и пустота. Страшно оставаться наедине с собой.", 1],
+          ["Мне нормально, но через какое-то время ухожу в планирование — не умею долго находиться в тишине и ничегонеделании.", 3],
+          ["Мозг судорожно подкидывает списки дел, обвиняя меня в лени и отсутствии планов и удовольствия от жизни.", 2]] },
+    { t: "Замечаешь ли ты в своей жизни или отношениях повторяющиеся ситуации?",
+      o: [["Я вижу эти паттерны и головой всё понимаю, но в критический момент реагирую по-старому.", 2],
+          ["Нет. Если фиксирую деструктивный сценарий — мгновенно перестраиваю мышление и делаю кардинально другие действия, иногда просто чтобы сломать старый сценарий и получить другой результат.", 4],
+          ["Да, это мой «день сурка». Раз за разом одно и то же — в отношениях, на работе, в реализации — я уже жду знакомого подвоха, и он случается.", 1],
+          ["Да, я вижу эти механизмы и шаг за шагом меняю свои реакции — это часто приводит к новому опыту.", 3]] },
+    { t: "Когда тебе нужно отказать и сказать твёрдое «нет» — как это ощущается?",
+      o: [["Учусь держать границы: отказываю вежливо, хотя внутри ещё могу ощущать дискомфорт.", 3],
+          ["Почти никогда не отказываю из страха конфликта или желания быть «хорошим человеком».", 1],
+          ["Не испытываю чувства вины и стыда, говоря «нет» тому, что мне не подходит. Чувствую, что имею на это право, и не сужу себя за это.", 4],
+          ["Отказываю, но испытываю дискомфорт, а потом долго мучаюсь чувством вины.", 2]] },
+    { t: "Если бы исчезла необходимость зарабатывать на базовое выживание, чем бы ты занялась?",
+      o: [["Продолжу делать то же, что и сейчас, но с кардинально другим уровнем свободы и масштаба.", 4],
+          ["Брошу то, что высасывает силы, и отправлюсь на поиски своего «настоящего призвания».", 2],
+          ["Займусь творчеством или обучением новым навыкам в знакомой сфере — сейчас считаю это несвоевременной роскошью.", 3],
+          ["Чувствую растерянность: ориентир всегда был на слово «надо», поэтому с трудом представляю, чего могу «хотеть».", 1]] },
+    { t: "Что ты чувствуешь, когда достигаешь реальных крупных результатов в развитии или деньгах?",
+      o: [["Внутри звучит что-то вроде: «Не высовывайся, большой успех привлекает проблемы».", 2],
+          ["Спокойную уверенность. Успех и масштаб — естественное следствие моих действий и вложений. Дальше будет только больше, и я этого заслуживаю.", 4],
+          ["«Синдром самозванца»: кажется, это случайность и меня вот-вот разоблачат, скажут, что мне просто повезло.", 1],
+          ["Радость, но мне всё ещё нужно подтверждение от авторитетных людей, родителей, партнёра — иначе будто успеха мало.", 3]] },
+    { t: "Как на тебя влияет тяжёлое эмоциональное состояние близкого человека?",
+      o: [["Я сопереживаю, но чётко разделяю: это эмоции другого, а это моё состояние.", 3],
+          ["Я разрушаюсь. Заражаюсь негативом и судорожно пытаюсь его «спасти».", 1],
+          ["Остаюсь устойчивой опорой. Умею поддерживать, не вовлекаясь в страдания другого, и помочь ему прожить свои эмоции, оставаясь стабильной рядом.", 4],
+          ["Моё состояние резко падает, я раздражаюсь или закрываюсь — мне тяжело удерживать себя, если рядом кому-то хуже.", 2]] },
+    { t: "На что направлен твой фокус внимания в жизни?",
+      o: [["Фокус смещён в работу или деньги. Остальные сферы оставила «на потом» — сейчас будто не время для отдыха.", 2],
+          ["Управляю своей витальностью, расставляю приоритеты, понимаю, что, когда и как мне важно делать, живу в избытке.", 4],
+          ["Помогаю близким, создаю комфортный быт, регулирую чужие эмоции и принимаю на себя весь удар. На себя сил не остаётся.", 1],
+          ["Удерживаю баланс, но это требует контроля и усилий. Сильно устаю и отдыхаю, только когда очень нужно.", 3]] },
+    { t: "Как ты взаимодействуешь со своей чуйкой и эмоциональным интеллектом?",
+      o: [["Интуиция и чувства — мой главный навигатор. Мгновенно считываю контекст и людей, опираюсь на чутьё и умею взаимодействовать со своими эмоциями.", 4],
+          ["Замечаю внутренние сигналы, но мне всегда нужны логические доказательства, что то, что я чувствую, правильно и оправдано.", 2],
+          ["Прислушиваюсь к ощущениям в теле при важных решениях, различаю эмоции, но не всегда иду за ними — могу затолкать поглубже, если «не время».", 3],
+          ["Опираюсь только на логику. Чувства считаю помехой для хорошей и комфортной жизни.", 1]] },
+    { t: "Ты планируешь масштабный шаг (запустить проект, поднять чек). Что ты чувствуешь?",
+      o: [["Прокрастинация. Откладываю шаг под разными предлогами, например, что «нужно ещё поучиться».", 2],
+          ["Действую легко: для меня масштаб — это амбициозный тренажёр, который помогает расти и встраивать новые качества в личность.", 4],
+          ["Страх критики и оценки. Боюсь потерять устойчивость и получить негативный фидбек со стороны.", 1],
+          ["Испытываю здоровое волнение, но иду в этот опыт ради роста — часто на силе воли, но в итоге остаюсь в плюсе.", 3]] },
+    { t: "Какое влияние оказывает твоё прошлое (обиды, детские сценарии, старые ошибки) на настоящее?",
+      o: [["Понимаю истоки сценариев, хотя триггеры иногда щёлкают. Проживаю их, даю выход чувствам, но в моменты слабости могу цепляться за прошлые эмоции.", 3],
+          ["Мысленно продолжаю спорить с обидчиками, в минуты слабости придумываю лучшие решения старых ситуаций.", 1],
+          ["Прошлое полностью интегрировано: я учитываю старый опыт, но выбираю проживать новый, который ведёт к новым целям и возможностям.", 4],
+          ["Груз прошлого мешает рисковать и доверять людям. Часто вспоминаю старые раны и обиды, жалею себя, использую это как повод быть бдительнее.", 2]] },
+    { t: "Каковы твои отношения с деньгами?",
+      o: [["Деньги текут свободно под мои задачи. Я чувствую безопасность в этой сфере, инвестирую в себя и легко трачу на то, что считаю правильным.", 4],
+          ["Доход упёрся в стеклянный потолок. Деньги для меня — источник постоянного контроля. Хотела бы зарабатывать больше, но не понимаю как.", 2],
+          ["Деньги даются тяжёлым трудом и тревогой. Их всё время не хватает, я живу «в кредит».", 1],
+          ["Вижу в деньгах эквивалент своей ценности, легко инвестирую в себя, но всё равно хочу большего, потому что чувствую свой потенциал.", 3]] },
+    { t: "Если убрать твои социальные роли (мать, эксперт, партнёр) — кем ты себя чувствуешь?",
+      o: [["Попытка снять маски вызывает дезориентацию: я не исчезаю, но не могу объяснить, кто я без всего этого.", 2],
+          ["Глубоко соединена с собой, знаю свою ценность, умею интегрировать и использовать свой потенциал в разных жизненных ситуациях.", 4],
+          ["Отделяю свои ценности от навязанных установок — это помогает всё больше чувствовать свою идентичность даже вне ролей.", 3],
+          ["Без привычных обязанностей и ролей плохо понимаю, в чём моя ценность.", 1]] },
+    { t: "Как можно описать твой уровень психологической устойчивости?",
+      o: [["Умею восстанавливаться, понимаю, когда нужно отдохнуть. Много реализую свой потенциал, но иногда возникает усталость.", 3],
+          ["Просыпаюсь уже уставшей, энергия утекает сквозь пальцы. Хотелось бы отдохнуть, но не получается.", 1],
+          ["Чувствую себя автором своей жизни. Нужна энергия — она у меня есть. Умею управлять своими ресурсами.", 4],
+          ["Энергия вроде есть, но также есть тревога и чужие ожидания. Это утомляет и раздражает, а что делать — не знаю.", 2]] }
+  ];
+  var TIERS = [
+    [15, 30, "«В плену сценарных автоматизмов»",
+     "Жизнь сильно напоминает заученный сценарий и «день сурка». Огромная часть ресурса уходит не на развитие, а на то, чтобы «заслуживать» одобрение, соответствовать правилам или защищаться от тревоги и чужих ожиданий. Истинный масштаб заблокирован страхом ошибки и неудач."],
+    [31, 46, "«На пороге своего Я: точка роста»",
+     "Отличный уровень осознанности и рефлексии! Ты всё понимаешь, но когда дело доходит до выхода на новый уровень (доход, проявление, масштаб), часто включаются предохранители и старые паттерны поведения. Можешь прокрастинировать и ощущать самосаботаж — а пробивать этот потолок на силе воли может приводить к выгоранию."],
+    [47, 60, "«Автономия и мастерство жизни»",
+     "Поздравляю! Ты свободна от навязанных установок, умеешь выстраивать границы и опираться на свои ценности. Ты выдерживаешь неопределённость и действуешь интуитивно, чувствуя, что будет лучше для тебя."]
+  ];
+
+  var box = document.getElementById('quiz-box');
+  var elIntro = box.querySelector('[data-quiz-intro]');
+  var elAsk = box.querySelector('[data-quiz-ask]');
+  var elResult = box.querySelector('[data-quiz-result]');
+  var elNum = box.querySelector('[data-quiz-num]');
+  var elBar = box.querySelector('[data-quiz-bar]');
+  var elText = box.querySelector('[data-quiz-text]');
+  var elOptions = box.querySelector('[data-quiz-options]');
+  var elBack = box.querySelector('[data-quiz-back]');
+  var qIndex = -1, picks = [];
+
+  function render() {
+    elIntro.hidden = qIndex !== -1;
+    elAsk.hidden = !(qIndex >= 0 && qIndex < QUESTIONS.length);
+    elResult.hidden = qIndex < QUESTIONS.length;
+    if (!elAsk.hidden) {
+      var q = QUESTIONS[qIndex];
+      elNum.textContent = qIndex + 1;
+      elBar.style.width = Math.round((qIndex / QUESTIONS.length) * 100) + '%';
+      elText.textContent = q.t;
+      elBack.hidden = qIndex === 0;
+      elOptions.innerHTML = '';
+      q.o.forEach(function (pair) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'quiz-opt';
+        b.textContent = pair[0];
+        b.addEventListener('click', function () { picks.push(pair[1]); qIndex++; render(); });
+        elOptions.appendChild(b);
+      });
+    }
+    if (!elResult.hidden) {
+      var score = picks.reduce(function (a, b) { return a + b; }, 0);
+      var tier = TIERS.filter(function (t) { return score >= t[0] && score <= t[1]; })[0] || TIERS[0];
+      box.querySelector('[data-quiz-score]').textContent = score;
+      box.querySelector('[data-quiz-title]').textContent = tier[2];
+      box.querySelector('[data-quiz-body]').textContent = tier[3];
+    }
+  }
+  box.querySelector('[data-quiz-start]').addEventListener('click', function () { qIndex = 0; picks = []; render(); });
+  box.querySelectorAll('[data-quiz-reset]').forEach(function (b) {
+    b.addEventListener('click', function () { qIndex = -1; picks = []; render(); });
+  });
+  elBack.addEventListener('click', function () { if (qIndex > 0) { qIndex--; picks.pop(); render(); } });
 })();
 </script>
-
 </body>
 </html>
