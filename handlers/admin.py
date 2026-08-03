@@ -16,8 +16,11 @@ from filters import IsAdmin
 from formatting import format_slot_human
 from google_calendar import GoogleCalendar
 from handlers.booking import apply_reschedule, build_event_fields, _occupied_slots
+from handlers.start import MAIN_MENU_TEXT
 from keyboards.inline import broadcast_confirm_kb, lead_done_kb
+from keyboards.reply import main_reply_kb
 from slots import free_slots
+from ui import reset_keyboard, show_screen
 
 router = Router()
 router.message.filter(IsAdmin())
@@ -274,11 +277,43 @@ async def cmd_bookings(message: Message) -> None:
 
 
 # ── Рассылка ─────────────────────────────────────────────────────────
+async def _copy_to(bot: Bot, user_id: int, data: dict) -> bool:
+    """Копия сообщения рассылки одному человеку. copy_message переносит любой
+    тип контента — текст, фото, кружок, голосовое — без пометки «переслано»."""
+    for attempt in (1, 2):
+        try:
+            await bot.copy_message(
+                chat_id=user_id,
+                from_chat_id=data["chat_id"],
+                message_id=data["message_id"],
+            )
+            return True
+        except TelegramRetryAfter as e:
+            if attempt == 2:
+                return False
+            await asyncio.sleep(e.retry_after)
+        except TelegramAPIError:
+            return False
+    return False
+
+
+async def _restore_bottom(bot: Bot, user_id: int) -> None:
+    """Пересобрать низ чата после сообщения Ланы: заново прислать 🤍-якорь с
+    клавиатурой и приветственный экран. Так сообщение остаётся НАД сердечком,
+    а меню — внизу чата (иначе рассылка падает под якорь и старое окно)."""
+    try:
+        await reset_keyboard(bot, user_id, main_reply_kb())
+        await show_screen(bot, user_id, MAIN_MENU_TEXT)
+    except TelegramAPIError:
+        logger.debug("Не пересобрал низ чата для %s", user_id)
+
+
 @router.message(Command("broadcast"))
 async def cmd_broadcast(message: Message, state: FSMContext) -> None:
     await state.set_state(BroadcastForm.waiting_message)
     await message.answer(
-        "Пришли сообщение для рассылки (текст, фото, видео — что угодно).\n"
+        "Пришли сообщение для рассылки (текст, голосовое, фото, видео — "
+        "что угодно).\n"
         "Я покажу превью перед отправкой. Отмена — /cancel"
     )
 
@@ -319,28 +354,15 @@ async def cb_broadcast_confirm(
 
     sent = failed = 0
     for user_id in user_ids:
-        try:
-            await bot.copy_message(
-                chat_id=user_id,
-                from_chat_id=data["chat_id"],
-                message_id=data["message_id"],
-            )
+        if await _copy_to(bot, user_id, data):
             sent += 1
-        except TelegramRetryAfter as e:
-            await asyncio.sleep(e.retry_after)
-            try:
-                await bot.copy_message(
-                    chat_id=user_id,
-                    from_chat_id=data["chat_id"],
-                    message_id=data["message_id"],
-                )
-                sent += 1
-            except TelegramAPIError:
-                failed += 1
-        except TelegramAPIError:
+            await _restore_bottom(bot, user_id)
+        else:
             # пользователь заблокировал бота или удалился
             failed += 1
-        await asyncio.sleep(0.05)
+        # три отправки на человека вместо одной — пауза выше, чтобы не
+        # упереться в лимит Telegram (~30 сообщений в секунду)
+        await asyncio.sleep(0.15)
 
     await callback.message.answer(
         f"✅ Рассылка завершена.\n"

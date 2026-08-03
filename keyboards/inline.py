@@ -1,7 +1,10 @@
 import calendar as _calendar
 from datetime import date as _date
 
+from aiogram.types import CopyTextButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from formatting import CRYPTO_ADDRESS
 
 # ── Внешние ссылки ───────────────────────────────────────────────────
 DM_URL = "https://t.me/LanaLeonovich"
@@ -9,6 +12,15 @@ PAY_RUB_URL = "https://web.tribute.tg/p/rTr"
 PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
+
+# Юр. документы на сайте. SITE_URL — заглушка: сайт лежит в web/, но домен
+# ещё не выкачен. Когда выкатится — правится одна строка (пути к страницам
+# уже совпадают с web/legal/). Дисклеймера по крипте на сайте пока нет.
+SITE_URL = "https://alania.sky"
+LEGAL_OFFER_URL = f"{SITE_URL}/legal/oferta.html"
+LEGAL_PRIVACY_URL = f"{SITE_URL}/legal/privacy.html"
+LEGAL_CONSENT_URL = f"{SITE_URL}/legal/consent.html"
+LEGAL_CRYPTO_URL = f"{SITE_URL}/legal/crypto.html"
 
 
 def ask_lana_kb():
@@ -109,7 +121,23 @@ def booking_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
     builder.button(text="Оплатить в рублях", url=PAY_RUB_URL)
     builder.button(text="Оплатить в евро", url=PAY_EUR_URL)
+    builder.button(text="Оплатить в криптовалюте",
+                   callback_data=f"pay_crypto:{booking_id}")
     builder.button(text="✓ Я оплатил(а)", callback_data=f"paid:{booking_id}")
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def booking_crypto_kb(booking_id: int):
+    """Экран крипто-оплаты: копирование адреса — нативной кнопкой Telegram
+    (copy_text, Bot API 8.0); адрес продублирован в тексте тегом <code> —
+    на клиентах постарше копируется тапом по нему."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⧉ Скопировать адрес кошелька",
+                   copy_text=CopyTextButton(text=CRYPTO_ADDRESS))
+    builder.button(text="✓ Я оплатил(а)", callback_data=f"paid_crypto:{booking_id}")
+    builder.button(text="⇦ Назад", callback_data=f"pay_back:{booking_id}")
     builder.button(text="Написать в ЛС", url=DM_URL)
     builder.adjust(1)
     return builder.as_markup()
