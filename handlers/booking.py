@@ -6,17 +6,27 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, LinkPreviewOptions, Message
 from sqlalchemy import select
 
 from booking_config import BookingConfig
 from database import Booking, get_session
-from formatting import PRICE_TEXT, format_slot_human
+from formatting import (
+    CRYPTO_ADDRESS,
+    CRYPTO_AMOUNT_TEXT,
+    PRICE_TEXT,
+    format_slot_human,
+)
 from google_calendar import GoogleCalendar
 from keyboards.inline import (
+    LEGAL_CONSENT_URL,
+    LEGAL_CRYPTO_URL,
+    LEGAL_OFFER_URL,
+    LEGAL_PRIVACY_URL,
     admin_confirm_pay_kb,
     admin_resched_kb,
     booking_calendar_kb,
+    booking_crypto_kb,
     booking_error_kb,
     booking_pay_kb,
     booking_times_kb,
@@ -35,6 +45,50 @@ _CALENDAR_TEXT = (
     "Выбери удобный для тебя день ⇩\n"
     "‼️ Часовой пояс: Прага CET (в скобках — московское время)"
 )
+
+
+# На экранах оплаты в тексте есть ссылки на юр. документы — карточку
+# предпросмотра сайта под сообщением гасим, она ломает вёрстку экрана.
+_NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
+
+LEGAL_NOTICE = (
+    "—> Нажимая кнопку «Оплатить», вы подтверждаете, что вам исполнилось "
+    "18 лет, вы ознакомились и полностью принимаете условия "
+    f'<a href="{LEGAL_OFFER_URL}">Публичной оферты</a>, '
+    f'<a href="{LEGAL_PRIVACY_URL}">Политики конфиденциальности</a> и '
+    f'<a href="{LEGAL_CONSENT_URL}">Информированного согласия</a>.\n'
+    "(При выборе оплаты криптовалютой также применяются условия "
+    f'<a href="{LEGAL_CRYPTO_URL}">Дисклеймера по крипто-платежам</a>).'
+)
+
+
+def _pay_screen_text(slot: datetime, hold_local: datetime) -> str:
+    return (
+        f"<b>✦ Твой слот: {format_slot_human(slot)}</b>\n\n"
+        f"● Стоимость: {PRICE_TEXT}\n\n"
+        f"Время держим до {hold_local:%H:%M} (Прага). "
+        "Оплати удобным способом и нажми\n"
+        "«✓ Я оплатил(а)» ⇩\n"
+        "Лана подтвердит запись, и тебе придёт сообщение.\n\n"
+        f"{LEGAL_NOTICE}"
+    )
+
+
+def _crypto_screen_text(slot: datetime, hold_local: datetime) -> str:
+    return (
+        "<b>✦ Оплата в криптовалюте</b>\n\n"
+        f"Слот: <b>{format_slot_human(slot)}</b>\n"
+        f"● Сумма: <b>{CRYPTO_AMOUNT_TEXT}</b>\n\n"
+        "Адрес кошелька:\n"
+        f"<code>{CRYPTO_ADDRESS}</code>\n\n"
+        "‼️ Переводи только USDT в сети TRC20 — в другой сети платёж не дойдёт. "
+        "Комиссию сети оплачивает отправитель.\n\n"
+        f"Время держим до {hold_local:%H:%M} (Прага). "
+        "После перевода нажми «✓ Я оплатил(а)» ⇩\n"
+        "Лана подтвердит запись, и тебе придёт сообщение.\n\n"
+        "К крипто-платежам применяются условия "
+        f'<a href="{LEGAL_CRYPTO_URL}">Дисклеймера по крипто-платежам</a>.'
+    )
 
 
 def _month_index(year: int, month: int) -> int:
@@ -249,12 +303,61 @@ async def cb_book_slot(
 
     hold_local = (now + booking_config.hold).astimezone(booking_config.tz)
     await callback.message.edit_text(
-        f"<b>✦ Твой слот: {format_slot_human(slot)}</b>\n\n"
-        f"● Стоимость: {PRICE_TEXT}\n\n"
-        f"Время держим до {hold_local:%H:%M} (Прага). "
-        "Оплати удобным способом и нажми «✓ Я оплатил(а)» ⇩\n"
-        "Лана подтвердит запись, и тебе придёт сообщение.",
+        _pay_screen_text(slot, hold_local),
         reply_markup=booking_pay_kb(booking_id),
+        link_preview_options=_NO_PREVIEW,
+    )
+
+
+async def _held_booking(callback: CallbackQuery, cfg: BookingConfig):
+    """(booking_id, slot, «держим до» в локальной зоне) для своей неистёкшей
+    брони на экранах оплаты. None + алерт — если бронь чужая, потеряна или
+    холд уже отпущен."""
+    try:
+        booking_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        await callback.answer("Не понял запись", show_alert=True)
+        return None
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        if not booking or booking.telegram_id != callback.from_user.id:
+            await callback.answer("Запись не найдена", show_alert=True)
+            return None
+        if booking.status != "held":
+            await callback.answer("Эта запись уже обработана 🤍", show_alert=True)
+            return None
+        slot = booking.slot_start
+        held_until = booking.held_until
+    if slot.tzinfo is None:
+        slot = slot.replace(tzinfo=timezone.utc)
+    if held_until.tzinfo is None:
+        held_until = held_until.replace(tzinfo=timezone.utc)
+    return booking_id, slot, held_until.astimezone(cfg.tz)
+
+
+@router.callback_query(F.data.startswith("pay_crypto:"))
+async def cb_pay_crypto(callback: CallbackQuery, booking_config: BookingConfig) -> None:
+    held = await _held_booking(callback, booking_config)
+    if held is None:
+        return
+    booking_id, slot, hold_local = held
+    await callback.message.edit_text(
+        _crypto_screen_text(slot, hold_local),
+        reply_markup=booking_crypto_kb(booking_id),
+        link_preview_options=_NO_PREVIEW,
+    )
+
+
+@router.callback_query(F.data.startswith("pay_back:"))
+async def cb_pay_back(callback: CallbackQuery, booking_config: BookingConfig) -> None:
+    held = await _held_booking(callback, booking_config)
+    if held is None:
+        return
+    booking_id, slot, hold_local = held
+    await callback.message.edit_text(
+        _pay_screen_text(slot, hold_local),
+        reply_markup=booking_pay_kb(booking_id),
+        link_preview_options=_NO_PREVIEW,
     )
 
 
@@ -290,6 +393,18 @@ async def _notify_admins(bot: Bot, admin_ids, text: str, reply_markup=None) -> N
 
 @router.callback_query(F.data.startswith("paid:"))
 async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> None:
+    await _claim_payment(callback, bot, admin_ids, crypto=False)
+
+
+@router.callback_query(F.data.startswith("paid_crypto:"))
+async def cb_paid_crypto(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> None:
+    await _claim_payment(callback, bot, admin_ids, crypto=True)
+
+
+async def _claim_payment(callback: CallbackQuery, bot: Bot, admin_ids: list[int],
+                         *, crypto: bool) -> None:
+    """«Я оплатил(а)» с любого экрана оплаты. Способ влияет только на текст
+    уведомления Лане — иначе непонятно, где искать деньги."""
     try:
         booking_id = int(callback.data.split(":", 1)[1])
     except ValueError:
@@ -314,12 +429,16 @@ async def cb_paid(callback: CallbackQuery, bot: Bot, admin_ids: list[int]) -> No
         f"Как только Лана подтвердит, придёт сообщение о записи на "
         f"<b>{format_slot_human(slot)}</b>."
     )
+    method = f"криптовалюта ({CRYPTO_AMOUNT_TEXT})" if crypto else "Tribute"
+    where = ("Проверь поступление USDT на кошелёк и подтверди ⇩" if crypto
+             else "Проверь оплату в Tribute и подтверди ⇩")
     await _notify_admins(
         bot, admin_ids,
         "💳 <b>Клиент сообщил об оплате слота</b>\n\n"
         f"<b>Слот:</b> {format_slot_human(slot)}\n"
+        f"<b>Способ:</b> {method}\n"
         f"{_client_line(callback)}\n\n"
-        "Проверь оплату в Tribute и подтверди ⇩",
+        f"{where}",
         reply_markup=admin_confirm_pay_kb(booking_id),
     )
 

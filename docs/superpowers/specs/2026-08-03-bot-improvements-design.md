@@ -80,15 +80,16 @@
 
 ```python
 SITE_URL = "https://alania.sky"          # TODO: реальный домен сайта
-LEGAL_OFFER_URL = f"{SITE_URL}/oferta"
-LEGAL_PRIVACY_URL = f"{SITE_URL}/privacy"
-LEGAL_CONSENT_URL = f"{SITE_URL}/consent"
-LEGAL_CRYPTO_URL = f"{SITE_URL}/crypto-disclaimer"
+LEGAL_OFFER_URL = f"{SITE_URL}/legal/oferta.html"
+LEGAL_PRIVACY_URL = f"{SITE_URL}/legal/privacy.html"
+LEGAL_CONSENT_URL = f"{SITE_URL}/legal/consent.html"
+LEGAL_CRYPTO_URL = f"{SITE_URL}/legal/crypto.html"
 ```
 
-Домен — заглушка по решению владельца: правится одной строкой, когда
-параллельная ветка сайта выкатит страницы. На крипто-экране повторяется только
-строка про Дисклеймер.
+Пути совпадают с `web/legal/`, который делает параллельная ветка сайта; домен —
+заглушка по решению владельца, правится одной строкой. Страницы дисклеймера по
+крипте на сайте пока нет — её нужно добавить там же. На крипто-экране
+повторяется только строка про Дисклеймер.
 
 ## 5. Сообщения Ланы всем — над сердечком
 
