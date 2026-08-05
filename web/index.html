@@ -175,6 +175,10 @@ strong { font-weight: 600; }
 .offer__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.35rem; }
 .offer h3 { max-width: 22rem; }
 .offer__price { font-size: 1.15rem; font-weight: 600; color: var(--navy); white-space: nowrap; }
+/* Цена стоит под текстом карточки, а не в шапке: сначала человек читает,
+   что входит в формат, и только потом видит сумму. */
+.offer__price--foot { margin: 1.9rem 0 0; padding-top: 1.35rem; border-top: 1px solid var(--rule); }
+.offer__price--foot + .cta { margin-top: 1.1rem; }
 .offer__meta { margin: 0 0 1.6rem; }
 .offer__sub { font-size: 0.95rem; font-weight: 300; font-style: italic; color: var(--mute); margin: 0 0 1.5rem; }
 .offer h4 { margin: 1.6rem 0 0.85rem; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green); }
@@ -188,8 +192,11 @@ strong { font-weight: 600; }
 .tags li::before { display: none; }
 
 /* ── Блок 6. Скоро ─────────────────────────────────────────────── */
+/* Названия и описания программ намеренно не публикуются, пока они в работе
+   (см. web/README.md) — здесь остаётся одна карточка-заглушка на всю ширину. */
 .soon { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: clamp(1.25rem, 2.5vw, 2rem); margin-top: clamp(2rem, 4vh, 3rem); }
 .soon__card { padding: clamp(1.5rem, 2.6vw, 2rem); border: 1px dashed rgba(74,107,87,0.4); border-radius: 2px; }
+.soon__card--wide { grid-column: 1 / -1; max-width: 44rem; }
 .chip { display: inline-block; margin-bottom: 1.1rem; padding: 0.3rem 0.65rem; background: rgba(74,107,87,0.1); color: var(--green); border-radius: 2px; font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
 .soon__card h3 { margin-bottom: 0.75rem; }
 .soon__card p { font-size: 0.95rem; font-weight: 400; line-height: 1.5; color: #43464D; }
@@ -517,7 +524,6 @@ strong { font-weight: 600; }
       <article class="offer">
         <div class="offer__head">
           <h3>Индивидуальная консультационная сессия</h3>
-          <span class="offer__price">100&nbsp;€ / 10&nbsp;000&nbsp;₽</span>
         </div>
         <p class="offer__meta meta">70 минут · онлайн</p>
 
@@ -535,6 +541,8 @@ strong { font-weight: 600; }
           <li>Индивидуальный план действий и рекомендации для закрепления результатов</li>
         </ul>
 
+        <p class="offer__price offer__price--foot">100&nbsp;€ / 10&nbsp;000&nbsp;₽</p>
+
         <a class="cta" href="https://t.me/alania_sky_bot?start=site">
           Записаться <span class="cta__arrow" aria-hidden="true">→</span>
         </a>
@@ -544,7 +552,6 @@ strong { font-weight: 600; }
         <div class="offer__head">
           <h3>Игра для пар «VECHNOST»</h3>
         </div>
-        <p class="offer__meta meta">В цветах вечности</p>
         <p class="offer__sub">Авторский инструмент для построения счастливых отношений</p>
 
         <h4>В основе</h4>
@@ -575,24 +582,11 @@ strong { font-weight: 600; }
       <div class="plank"><p class="label">Скоро</p></div>
       <h2>Программы и практикумы</h2>
       <div class="soon">
-        <article class="soon__card">
+        <article class="soon__card soon__card--wide">
           <span class="chip">В разработке</span>
-          <h3>Создание своей реальности</h3>
-          <p><em>Как управлять своей жизнью в обход ума.</em> Практическое руководство
-          по перехвату внимания и управлению состоянием.</p>
-        </article>
-        <article class="soon__card">
-          <span class="chip">В разработке</span>
-          <h3>Курс-практикум «Точка сборки»</h3>
-          <p>Перепрошивка мышления, избавление от деструктивных сценариев и сборка
-          собственных правил жизни.</p>
-        </article>
-        <article class="soon__card">
-          <span class="chip">В разработке</span>
-          <h3>Курс-практикум «Излом года»</h3>
-          <p><em>Для тревожников и не только.</em> Научно обоснованное целеполагание:
-          как не загнать себя в тупик, перестать соревноваться с чужими успехами
-          и бояться «не успеть».</p>
+          <p>Сейчас в работе несколько авторских программ и практикумов. Подробности
+          и даты старта я объявлю в Telegram-канале и в боте — там же откроется
+          первая запись.</p>
         </article>
       </div>
     </div>
@@ -742,8 +736,8 @@ strong { font-weight: 600; }
               Даже если ваш запрос кажется необычным или запутанным, в его основе всегда
               лежат базовые психологические и телесные зажимы. Работа ведётся на уровне
               первопричин, поэтому метод универсален для большинства жизненных ситуаций.</li>
-              <li><strong>Вход без рисков через установочную сессию.</strong> Вам не нужно
-              принимать решение о долгосрочной работе вслепую. На первой диагностической
+              <li><strong>Вход без рисков через диагностическую сессию.</strong> Вам не нужно
+              принимать решение о долгосрочной работе вслепую. На первой
               встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос
               эффективнее проработать у специалиста другого профиля (например, смежного
               медицинского направления), я честно и открыто скажу вам об этом
@@ -778,7 +772,7 @@ strong { font-weight: 600; }
               «стеклянного потолка».</li>
             </ul>
             <p style="margin-top:1rem">Чтобы понять, смогу ли я быть вам полезна, мы проводим
-            установочную сессию — важный этап, где я оцениваю ваш запрос, текущее состояние
+            диагностическую сессию — важный этап, где я оцениваю ваш запрос, текущее состояние
             и подбираю наиболее безопасный и эффективный формат работы.</p>
           </div>
         </details>
