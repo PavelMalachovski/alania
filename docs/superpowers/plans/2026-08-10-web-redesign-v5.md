@@ -162,6 +162,24 @@ def test_channel_link_returned():
     assert 'href="https://t.me/alania_sky"' in html()
 
 
+def test_head_carries_seo_and_preview():
+    """Ссылку на сайт шлют в Telegram — без og-блока она не развернётся
+    в превью, а og.jpg собирается и весит, но никем не используется."""
+    page = html()
+    for needle in ('name="description"', 'rel="canonical"',
+                   'property="og:title"', 'property="og:image"',
+                   'name="twitter:card"', "assets/og.jpg"):
+        assert needle in page, f"в head нет {needle}"
+
+
+def test_exactly_one_h1_and_it_has_text():
+    """В бандле два ПУСТЫХ h1, а имя лежало в h2 — страница уехала бы
+    в прод без единого заголовка первого уровня."""
+    h1s = re.findall(r"<h1\b[^>]*>(.*?)</h1>", html(), re.S)
+    assert len(h1s) == 1, f"ожидается один h1, найдено {len(h1s)}"
+    assert re.sub(r"<[^>]+>", "", h1s[0]).strip(), "h1 пустой"
+
+
 def test_reviews_are_a_swipe_track():
     """Отзывы листаются вбок нативным scroll-snap, без JS."""
     page = html()
@@ -392,17 +410,55 @@ inner = inner.replace(photo, (
     '</picture>'
 ))
 
+# 5. семантика заголовков: в бандле два ПУСТЫХ <h1> подряд, а видимое имя
+# лежит в <h2>. Страница уехала бы в прод без единого заголовка первого
+# уровня. Пустые h1 удаляем (они нулевой высоты, но как флекс-элементы
+# съедают 2×26px гэпа), видимый заголовок повышаем до h1 — инлайновые
+# стили сохраняются, поэтому вид не меняется.
+empty_h1 = re.findall(r"<h1\b[^>]*>\s*</h1>", inner)
+assert len(empty_h1) == 2, f"ожидались два пустых h1, найдено {len(empty_h1)}"
+inner = re.sub(r"<h1\b[^>]*>\s*</h1>", "", inner)
+
+inner, n = re.subn(r"<h2(\s[^>]*)>(\s*Лана Леонович<br>\s*)</h2>",
+                   r"<h1\1>\2</h1>", inner, count=1)
+assert n == 1, "не нашёл заголовок героя «Лана Леонович» для повышения до h1"
+
+HEAD_SEO = """<title>Лана Леонович — психолог, коуч, телесный практик. Консультации онлайн</title>
+<meta name="description" content="Индивидуальные онлайн-сессии: классическая психология, коучинг и работа с телом. 70 минут, видеозвонок. Запись через Telegram-бот.">
+<meta name="theme-color" content="#FAFAF7">
+<link rel="canonical" href="https://alania.vercel.app/">
+
+<!-- Превью при пересылке ссылки. Адреса обязаны быть абсолютными: на
+     относительные мессенджеры не ходят. og.jpg — отдельный кадр 1200×630,
+     а не lana.jpg: тот портретный, и предпросмотр обрезал бы его по центру.
+     Формат jpg, потому что webp собирают в превью не все клиенты. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Лана Леонович">
+<meta property="og:url" content="https://alania.vercel.app/">
+<meta property="og:title" content="Лана Леонович — психолог, коуч, телесный практик">
+<meta property="og:description" content="Психология, коучинг и работа с телом в одном подходе. Индивидуальная сессия 70 минут онлайн.">
+<meta property="og:image" content="https://alania.vercel.app/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Лана Леонович">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">"""
+
 OUT.write_text(
     "<!DOCTYPE html>\n"
     '<html lang="ru"><head>\n'
     '<meta charset="utf-8">\n'
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-    "<title>Лана Леонович — психолог, коуч, телесный практик</title>\n"
+    f"{HEAD_SEO}\n\n"
     '<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">\n'
     '<link rel="preload" as="font" type="font/woff2" crossorigin '
     'href="assets/fonts/golos-cyrillic.woff2">\n'
     '<link rel="preload" as="font" type="font/woff2" crossorigin '
     'href="assets/fonts/prata-cyrillic.woff2">\n'
+    "<!-- Фото в герое — самый крупный элемент первого экрана. Без preload\n"
+    "     браузер добирается до него только после разбора стилей. -->\n"
+    '<link rel="preload" as="image" href="assets/lana.webp" type="image/webp" '
+    'fetchpriority="high">\n'
     f"<style>{css}</style>\n"
     "</head>\n<body>\n"
     f"{inner}\n"
@@ -591,8 +647,10 @@ p.write_text(s, encoding="utf-8")
 print("было:", before, "осталось:", s.count("font-family: Inter"))
 ```
 
-Ожидается `было: 28 осталось: 0`. Остальные свойства в тех же `style` —
-размеры, цвета, фон — **не трогать**.
+Значение имеет `осталось: 0`. Число «было» — справочное и может быть меньше
+28: Task 3 удаляет два пустых `<h1>`, у одного из которых в инлайновом стиле
+как раз стоял Inter. Остальные свойства в тех же `style` — размеры, цвета,
+фон — **не трогать**.
 
 - [ ] **Step 3: Проверить**
 
