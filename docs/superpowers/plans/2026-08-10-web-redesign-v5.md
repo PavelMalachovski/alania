@@ -522,8 +522,8 @@ git commit -m "Лендинг v5: разметка и стили из бандл
 ```
 
 `…ответ…` здесь — заглушка для чтения плана: в файле на этом месте лежит
-готовый текст ответа, местами в несколько абзацев со `<span>`, `<ul>` и
-`<blockquote>`. Он **переносится посимвольно, без единой правки**. Меняется
+готовый текст ответа, местами в несколько абзацев со `<span>` и `<ul>`.
+Он **переносится посимвольно, без единой правки**. Меняется
 ровно две вещи: `<div sc-camel-on-click=…>` превращается в `<summary>`
 (с текстом вопроса и без второго `<span>` со знаком), а из `style` у
 контейнера ответа вырезается `;display:{{ dN }}` — остальные свойства
@@ -552,9 +552,21 @@ git commit -m "Лендинг v5: разметка и стили из бандл
 
 - [ ] **Step 3: Проверить**
 
-Run: `PYTHONIOENCODING=utf-8 python -m pytest tests/test_landing.py -q -k "placeholders or details"`
-Expected: PASS — `test_no_runtime_placeholders` и `test_faq_is_native_details`
-зелёные.
+Run: `PYTHONIOENCODING=utf-8 python -m pytest tests/test_landing.py -q`
+Expected: 6 failed / 9 passed. Зеленеет `test_faq_is_native_details`.
+
+`test_no_runtime_placeholders` на этом шаге **остаётся красным, и это
+правильно**: он проверяет три вещи разом, и третья — отсутствие
+`style-hover` — предмет Task 5. Позеленеет там. Не чини его здесь и не
+трогай атрибуты `style-hover`.
+
+Проверить свою часть отдельно:
+
+```bash
+grep -c '{{' web/index.html; grep -c 'sc-camel-on-click' web/index.html
+```
+
+Обе команды обязаны вернуть 0.
 
 - [ ] **Step 4: Коммит**
 
