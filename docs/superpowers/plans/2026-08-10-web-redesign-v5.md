@@ -601,9 +601,16 @@ grep -o 'style-hover="[^"]*"' web/index.html | sort | uniq -c
 - [ ] **Step 2: Дописать правила в конец `<style>`**
 
 ```css
-.btn-accent:hover{background:#C8705A;color:#fff}
-.btn-invert:hover{background:#fff;color:#2B3366}
+.btn-accent:hover{background:#C8705A!important;color:#fff!important}
+.btn-invert:hover{background:#fff!important;color:#2B3366!important}
 ```
+
+`!important` здесь обязателен и не является ленью. У всех девяти кнопок
+собственный инлайновый `style` с `background` и `color`, а инлайн по
+специфичности всегда бьёт class-селектор из `<style>` — без `!important`
+правило молча не сработает, и это не видно ни в разметке, ни в тестах,
+только курсором в браузере. Вычищать инлайновые стили вместо этого нельзя:
+они несут не только цвета, но и размеры, скругления и `transition`.
 
 - [ ] **Step 3: Проверить**
 
