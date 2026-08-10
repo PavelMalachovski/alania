@@ -3,7 +3,14 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramAPIError, TelegramRetryAfter
+from aiogram.exceptions import (
+    TelegramAPIError,
+    TelegramForbiddenError,
+    TelegramNetworkError,
+    TelegramNotFound,
+    TelegramRetryAfter,
+    TelegramServerError,
+)
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -277,35 +284,77 @@ async def cmd_bookings(message: Message) -> None:
 
 
 # ── Рассылка ─────────────────────────────────────────────────────────
-async def _copy_to(bot: Bot, user_id: int, data: dict) -> bool:
+# На человека уходит 5 запросов: копия сообщения + якорь + приветствие и два
+# удаления к ним. Лимит Telegram — около 30 запросов в секунду на бота, и
+# считаются в нём все методы, а не только отправки. При паузе 0.15 с рассылка
+# давала ~33 запроса в секунду, упиралась во flood control (429) и теряла часть
+# людей: одной повторной попытки не хватало. 0.4 с — примерно 12 запросов в
+# секунду, с запасом.
+BROADCAST_DELAY = 0.4
+SEND_ATTEMPTS = 4
+PROGRESS_EVERY = 25
+
+SENT, BLOCKED, ERROR = "sent", "blocked", "error"
+
+
+async def _copy_to(bot: Bot, user_id: int, data: dict) -> str:
     """Копия сообщения рассылки одному человеку. copy_message переносит любой
-    тип контента — текст, фото, кружок, голосовое — без пометки «переслано»."""
-    for attempt in (1, 2):
+    тип контента — текст, фото, кружок, голосовое — без пометки «переслано».
+
+    Возвращает SENT / BLOCKED (бот заблокирован или аккаунт удалён — повторять
+    бессмысленно) / ERROR (не доставлено, повторы исчерпаны)."""
+    for attempt in range(1, SEND_ATTEMPTS + 1):
         try:
             await bot.copy_message(
                 chat_id=user_id,
                 from_chat_id=data["chat_id"],
                 message_id=data["message_id"],
             )
-            return True
+            return SENT
         except TelegramRetryAfter as e:
-            if attempt == 2:
-                return False
-            await asyncio.sleep(e.retry_after)
+            logger.warning(
+                "Рассылка: flood control, ждём %s с (попытка %s, получатель %s)",
+                e.retry_after, attempt, user_id,
+            )
+            if attempt == SEND_ATTEMPTS:
+                return ERROR
+            await asyncio.sleep(e.retry_after + 1)
+        except (TelegramForbiddenError, TelegramNotFound):
+            return BLOCKED
+        except (TelegramNetworkError, TelegramServerError) as e:
+            logger.warning("Рассылка: сеть/сервер Telegram для %s: %s", user_id, e)
+            if attempt == SEND_ATTEMPTS:
+                return ERROR
+            await asyncio.sleep(2 * attempt)
         except TelegramAPIError:
-            return False
-    return False
+            logger.exception("Рассылка: Telegram отказал для %s", user_id)
+            return ERROR
+        except Exception:
+            logger.exception("Рассылка: неожиданная ошибка для %s", user_id)
+            return ERROR
+    return ERROR
 
 
 async def _restore_bottom(bot: Bot, user_id: int) -> None:
     """Пересобрать низ чата после сообщения Ланы: заново прислать 🤍-якорь с
     клавиатурой и приветственный экран. Так сообщение остаётся НАД сердечком,
-    а меню — внизу чата (иначе рассылка падает под якорь и старое окно)."""
+    а меню — внизу чата (иначе рассылка падает под якорь и старое окно).
+
+    Глотаем здесь любое исключение, а не только TelegramAPIError: внутри есть
+    обращения к settings, и падение БД раньше валило весь цикл рассылки — часть
+    людей оставалась без сообщения, а Лана даже не видела итогового отчёта."""
     try:
         await reset_keyboard(bot, user_id, main_reply_kb())
         await show_screen(bot, user_id, MAIN_MENU_TEXT)
+    except Exception:
+        logger.warning("Рассылка: не пересобрал низ чата для %s", user_id, exc_info=True)
+
+
+async def _progress(message: Message, done: int, total: int) -> None:
+    try:
+        await message.edit_text(f"⏳ Рассылка идёт: {done} из {total}…")
     except TelegramAPIError:
-        logger.debug("Не пересобрал низ чата для %s", user_id)
+        logger.debug("Рассылка: не обновил прогресс")
 
 
 @router.message(Command("broadcast"))
@@ -352,20 +401,54 @@ async def cb_broadcast_confirm(
         result = await session.execute(select(User.telegram_id))
         user_ids = list(result.scalars())
 
-    sent = failed = 0
-    for user_id in user_ids:
-        if await _copy_to(bot, user_id, data):
-            sent += 1
-            await _restore_bottom(bot, user_id)
-        else:
-            # пользователь заблокировал бота или удалился
-            failed += 1
-        # три отправки на человека вместо одной — пауза выше, чтобы не
-        # упереться в лимит Telegram (~30 сообщений в секунду)
-        await asyncio.sleep(0.15)
+    sent = blocked = 0
+    errors: list[int] = []
+    total = len(user_ids)
+    logger.info("Рассылка: старт, получателей %s", total)
+    for done, user_id in enumerate(user_ids, start=1):
+        # Ни одна ошибка на конкретном человеке не должна обрывать цикл: раньше
+        # исключение улетало в dp.errors(), рассылка тихо останавливалась на
+        # середине списка, и остальные не получали ничего.
+        try:
+            status = await _copy_to(bot, user_id, data)
+            if status == SENT:
+                sent += 1
+                await _restore_bottom(bot, user_id)
+            elif status == BLOCKED:
+                blocked += 1
+            else:
+                errors.append(user_id)
+        except Exception:
+            logger.exception("Рассылка: сорвалась отправка для %s", user_id)
+            errors.append(user_id)
+        if done % PROGRESS_EVERY == 0 and done < total:
+            await _progress(callback.message, done, total)
+        await asyncio.sleep(BROADCAST_DELAY)
 
-    await callback.message.answer(
-        f"✅ Рассылка завершена.\n"
-        f"Доставлено: {sent}\n"
-        f"Не доставлено (бот заблокирован и т.п.): {failed}"
+    logger.info(
+        "Рассылка: готово. Доставлено %s, заблокировали %s, ошибок %s",
+        sent, blocked, len(errors),
+    )
+    report = [
+        "✅ Рассылка завершена.",
+        f"Всего в базе: {total}",
+        f"Доставлено: {sent}",
+        f"Заблокировали бота или удалились: {blocked}",
+        f"Не доставлено из-за ошибок: {len(errors)}",
+    ]
+    if errors:
+        ids = ", ".join(str(i) for i in errors[:10])
+        tail = " …" if len(errors) > 10 else ""
+        report.append(f"\nID с ошибкой: {ids}{tail}\nИм можно написать вручную.")
+    await callback.message.answer("\n".join(report))
+
+
+@router.callback_query(F.data.in_({"broadcast_confirm", "broadcast_cancel"}))
+async def cb_broadcast_stale(callback: CallbackQuery) -> None:
+    """Кнопки превью, пережившие рестарт бота. FSM лежит в памяти процесса, и
+    состояние `waiting_confirm` рестарт не переживает — без этого хендлера
+    нажатие «Отправить» молча не делало бы ничего, и рассылка «не уходила»."""
+    await callback.answer(
+        "Превью устарело — бот перезапускался. Пришли сообщение заново: /broadcast",
+        show_alert=True,
     )
