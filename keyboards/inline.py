@@ -13,14 +13,16 @@ PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
 
-# Юр. документы на сайте. SITE_URL — заглушка: сайт лежит в web/, но домен
-# ещё не выкачен. Когда выкатится — правится одна строка (пути к страницам
-# уже совпадают с web/legal/). Дисклеймера по крипте на сайте пока нет.
-SITE_URL = "https://alania.sky"
-LEGAL_OFFER_URL = f"{SITE_URL}/legal/oferta.html"
-LEGAL_PRIVACY_URL = f"{SITE_URL}/legal/privacy.html"
-LEGAL_CONSENT_URL = f"{SITE_URL}/legal/consent.html"
-LEGAL_CRYPTO_URL = f"{SITE_URL}/legal/crypto.html"
+# Юр. документы — Google Docs Ланы, открыты по ссылке без входа в аккаунт.
+# Форма /preview — read-only читалка: открывается прямо в браузере и не тянет
+# в приложение Docs, как /edit. Хвост исходных ссылок (?usp=drivesdk&ouid=…)
+# не нужен — доступ даёт сам id, а «&» в HTML-разметке сообщения лишний.
+# Те же тексты продублированы в web/legal/ — их использует лендинг.
+_GDOC = "https://docs.google.com/document/d/{}/preview"
+LEGAL_OFFER_URL = _GDOC.format("1uKkXGBah_qI0jlRUBaD0SyylDStKr2sP")
+LEGAL_PRIVACY_URL = _GDOC.format("1_ZJE1ejwbpGsbt3tkF89EyuyiA2WPeVm")
+LEGAL_CONSENT_URL = _GDOC.format("1CPsoI6U1nC1gN6O8_QanG1fi4-mSHa-w")
+LEGAL_CRYPTO_URL = _GDOC.format("1uDfasXkWk9bQDE0tVvjKD_qegS3hhRh5")
 
 
 def ask_lana_kb():

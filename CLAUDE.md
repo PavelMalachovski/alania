@@ -158,8 +158,10 @@ python main.py
     Кнопки «Меню» больше нет.
   - `consultation.py`, `info.py` — контентные экраны (тексты + клавиатуры).
 - `keyboards/inline.py` — все inline-клавиатуры и внешние URL (одним блоком
-  сверху), включая `LEGAL_*_URL` (пути совпадают с `web/legal/`; `SITE_URL` —
-  заглушка до выкатки домена сайта, правится одной строкой).
+  сверху), включая `LEGAL_*_URL` — четыре Google Docs Ланы в форме
+  `/preview` (read-only читалка вместо редактора `/edit`; id собираются
+  через `_GDOC.format(...)`). Копии тех же текстов лежат в `web/legal/` для
+  лендинга — правя один источник, не забывай про второй.
   `main_menu_kb()` удалён — разделы переехали в нижнюю клавиатуру.
 - `keyboards/reply.py` — `main_reply_kb()`: постоянная `ReplyKeyboardMarkup`
   (`resize_keyboard=True`, `is_persistent=True`) на 7 кнопок (без цветных
