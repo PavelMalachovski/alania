@@ -157,7 +157,9 @@ def test_legal_links_point_to_google_docs():
 
 
 def test_channel_link_returned():
-    assert "https://t.me/alania_sky" in html()
+    """Проверка идёт по href целиком: голая подстрока https://t.me/alania_sky
+    является префиксом ссылки на бота alania_sky_bot и зеленела бы ложно."""
+    assert 'href="https://t.me/alania_sky"' in html()
 
 
 def test_reviews_are_a_swipe_track():
@@ -370,6 +372,11 @@ inner = re.sub(r'<meta name="viewport"[^>]*>\s*', "", inner)
 # 3. пути шрифтов: uuid -> assets/fonts/<семейство>-<сабсет>.woff2
 SLUG = {"Golos Text": "golos", "Prata": "prata"}
 css = "\n".join(styles)
+
+# шапка-комментарий из бандла утверждает, что шрифты грузятся с Google
+# Fonts. После вендоринга это неправда, а упоминание fonts.googleapis.com
+# в тексте ещё и валит проверку самохостинга. Вырезаем.
+css = re.sub(r"/\*\s*Both faces come from Google Fonts.*?\*/\s*", "", css, flags=re.S)
 for subset, block in re.findall(r"/\*\s*([\w-]+)\s*\*/\s*@font-face\s*\{(.*?)\}", css, re.S):
     family = re.search(r"font-family:\s*'([^']+)'", block).group(1)
     uuid = re.search(r'url\("([^"]+)"\)', block).group(1)
