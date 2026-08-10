@@ -51,7 +51,7 @@
 |---|---|
 | `web/index.html` | вся страница: разметка, `<style>`, без JS |
 | `web/assets/fonts/*.woff2` | 8 файлов, Golos Text ×4 сабсета и Prata ×4 |
-| `web/assets/lana.webp` / `lana.jpg` | портрет 1600×2000 в двух форматах |
+| `web/assets/lana.webp` / `lana.jpg` | портрет 1280×1600 в двух форматах |
 | `web/assets/og.jpg` | 1200×630 для превью ссылки |
 | `web/assets/favicon.svg` | монограмма ЛЛ |
 | `tests/test_landing.py` | структурные проверки готовой страницы |
@@ -278,10 +278,14 @@ photo_uuid = next(u for u, v in assets.items() if v["mime"] == "image/jpeg")
 src_jpg = Path(__file__).parent / "lana-src.jpg"
 src_jpg.write_bytes(blob(photo_uuid))
 
+# 1280x1600, а не 1600x2000: исходник шумный (лес, листва), и на 1600px
+# бюджет продавливает webp до quality 43 с видимой потерей детали. На
+# 1280px при том же весе quality возвращается к 67, детализация лица и
+# глаз выше на 12%. Ниже 1280 идти нельзя — выигрыш пропадает.
 im = Image.open(src_jpg).convert("RGB")
-portrait = im.resize((1600, 2000), Image.LANCZOS)
-portrait.save(WEB / "assets" / "lana.webp", "WEBP", quality=82, method=6)
-portrait.save(WEB / "assets" / "lana.jpg", "JPEG", quality=85,
+portrait = im.resize((1280, 1600), Image.LANCZOS)
+portrait.save(WEB / "assets" / "lana.webp", "WEBP", quality=67, method=6)
+portrait.save(WEB / "assets" / "lana.jpg", "JPEG", quality=78,
               optimize=True, progressive=True)
 
 # og: ширина 1200, полоса 630 вокруг фокуса 30% по высоте — как
@@ -300,10 +304,12 @@ for name in ("lana.webp", "lana.jpg", "og.jpg"):
 
 Run: `PYTHONIOENCODING=utf-8 python <scratchpad>/extract_assets.py`
 Expected: восемь строк «шрифт …» и три строки с весами. Ожидаемые порядки:
-шрифты 7–37 КБ каждый, `lana.webp` ~110 КБ, `lana.jpg` ~310 КБ, `og.jpg` ~90 КБ.
+шрифты 7–37 КБ каждый, `lana.webp` ~195 КБ, `lana.jpg` ~250 КБ, `og.jpg` ~175 КБ.
 
 Если `lana.webp` вылез за 200 КБ или `lana.jpg` за 400 КБ — снизить `quality`
 шагом по 3 и перезапустить. Бюджеты заданы в `test_image_weight_budget`.
+Размерность при этом **не менять**: 1280×1600 подобрано замером, дальнейшее
+уменьшение ухудшает картинку, а не улучшает.
 
 - [ ] **Step 3: Проверить бюджеты весов**
 
@@ -374,7 +380,7 @@ photo = re.search(r'<img[^>]*alt="Лана Леонович"[^>]*>', inner).grou
 inner = inner.replace(photo, (
     '<picture>'
     '<source srcset="assets/lana.webp" type="image/webp">'
-    '<img src="assets/lana.jpg" alt="Лана Леонович" width="1600" height="2000" '
+    '<img src="assets/lana.jpg" alt="Лана Леонович" width="1280" height="1600" '
     'style="width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block">'
     '</picture>'
 ))
