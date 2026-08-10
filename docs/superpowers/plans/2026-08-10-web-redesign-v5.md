@@ -160,6 +160,16 @@ def test_channel_link_returned():
     assert "https://t.me/alania_sky" in html()
 
 
+def test_reviews_are_a_swipe_track():
+    """Отзывы листаются вбок нативным scroll-snap, без JS."""
+    page = html()
+    assert page.count('class="review-card"') == 7, "семь карточек в ленте"
+    assert "scroll-snap-type:x mandatory" in page
+    assert "scroll-snap-align:start" in page
+    assert "columns:2" not in page, "мульти-колонка заменена лентой"
+    assert "break-inside" not in page, "вне мульти-колонки свойство мертво"
+
+
 def test_local_assets_exist():
     """Каждый локальный путь из src/href/url() лежит на диске."""
     page = html()
@@ -457,7 +467,6 @@ git commit -m "Лендинг v5: разметка и стили из бандл
 
 ```css
 .faq-item{background:#fff;border-radius:14px;overflow:hidden}
-.faq-item+.faq-item{margin-top:12px}
 .faq-item summary{display:flex;gap:20px;align-items:baseline;
   justify-content:space-between;padding:24px 28px;cursor:pointer;
   font-size:1.02rem;color:#1C1C2E;list-style:none}
@@ -468,8 +477,9 @@ git commit -m "Лендинг v5: разметка и стили из бандл
 ```
 
 Родительский `<div style="display:flex;flex-direction:column;gap:12px">`,
-в котором лежали карточки, остаётся — `margin-top` в `.faq-item+.faq-item`
-подстраховывает на случай, если у браузера нет поддержки `gap` во flex.
+в котором лежали карточки, остаётся и продолжает раздавать отступы между
+ними. Своего `margin` у `.faq-item` быть не должно — он сложился бы с `gap`
+и промежутки стали бы 24px вместо 12.
 
 - [ ] **Step 3: Проверить**
 
@@ -547,24 +557,29 @@ grep -o 'font-family: Inter[^;"]*[;"]' web/index.html | sort | uniq -c
 
 - [ ] **Step 2: Вырезать объявление**
 
-Убрать подстроку `font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;`
-(и её варианты с `&quot;` вместо кавычек) из всех инлайновых `style`.
-Остальные свойства в тех же `style` — размеры, цвета, отступы — **не трогать**.
-
-Точечная замена регуляркой по файлу:
+Все 28 объявлений посимвольно одинаковы, поэтому замена **литеральная,
+не регуляркой**. Регулярка вида `font-family:\s*Inter[^;"]*;` здесь ломает
+разметку: внутри объявления стоит `&quot;`, а эта сущность сама кончается
+точкой с запятой — класс `[^;"]*` останавливается на ней и обрезает строку
+посередине, оставляя в атрибуте мусор `Segoe UI&quot;, Roboto, sans-serif;`.
 
 ```python
-import re
 from pathlib import Path
+
+NEEDLE = ('font-family: Inter, -apple-system, BlinkMacSystemFont, '
+          '&quot;Segoe UI&quot;, Roboto, sans-serif;')
 
 p = Path(r"C:/Git/alania/web/index.html")
 s = p.read_text(encoding="utf-8")
-s2 = re.sub(r"font-family:\s*Inter[^;\"]*;\s*", "", s)
-p.write_text(s2, encoding="utf-8")
-print("вырезано:", len(re.findall(r"font-family:\s*Inter", s)) - len(re.findall(r"font-family:\s*Inter", s2)))
+before = s.count(NEEDLE)
+# сначала вариант с висящим пробелом, затем без него
+s = s.replace(NEEDLE + " ", "").replace(NEEDLE, "")
+p.write_text(s, encoding="utf-8")
+print("было:", before, "осталось:", s.count("font-family: Inter"))
 ```
 
-Ожидается `вырезано: 28`.
+Ожидается `было: 28 осталось: 0`. Остальные свойства в тех же `style` —
+размеры, цвета, фон — **не трогать**.
 
 - [ ] **Step 3: Проверить**
 
@@ -647,7 +662,98 @@ git commit -m "Юр-ссылки на Google Docs, канал в футере, f
 
 ---
 
-### Task 8: Удалить web/legal/ и переписать README
+### Task 8: Отзывы — горизонтальная лента со свайпом
+
+Сейчас семь отзывов выложены CSS-мульти-колонкой: `columns:2` на десктопе,
+`columns:1` на мобильном через `[data-cols]`. Превращаем в ленту, которая
+листается пальцем на телефоне и трекпадом на десктопе. **Одинаково на всех
+ширинах** — так решено. Реализация нативная, `scroll-snap`, без строчки JS.
+
+**Files:**
+- Modify: `web/index.html` — контейнер отзывов, семь карточек, блок CSS
+
+**Interfaces:**
+- Consumes: `web/index.html` после Task 7.
+- Produces: класс `.reviews-track` на контейнере и `.review-card` на каждой
+  из семи карточек — на них опирается `test_reviews_are_a_swipe_track`.
+
+- [ ] **Step 1: Переделать контейнер**
+
+Было:
+
+```html
+<div data-cols="1" style="columns:2;column-gap:20px">
+```
+
+Стало — атрибут `data-cols` уходит вместе с инлайновыми `columns`,
+контейнер получает класс и становится доступным с клавиатуры:
+
+```html
+<div class="reviews-track" tabindex="0" role="group" aria-label="Отзывы клиентов">
+```
+
+- [ ] **Step 2: Переделать семь карточек**
+
+Каждая из семи (найти по `break-inside`, их ровно 7). Было:
+
+```html
+<div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+```
+
+Стало — `break-inside` вне мульти-колонки не работает, `margin-bottom`
+заменяется на `gap` у ленты:
+
+```html
+<div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+```
+
+Содержимое карточек — цитата, текст, подпись — **не трогать**.
+
+- [ ] **Step 3: Дописать стили ленты в конец `<style>`**
+
+```css
+.reviews-track{display:flex;gap:20px;overflow-x:auto;
+  scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  scrollbar-width:none;padding-bottom:6px}
+.reviews-track::-webkit-scrollbar{display:none}
+.reviews-track:focus-visible{outline:2px solid #C8705A;outline-offset:4px}
+.review-card{flex:0 0 min(420px,82vw);scroll-snap-align:start}
+```
+
+`overscroll-behavior-x:contain` обязателен: без него свайп до конца ленты
+на iOS уводит браузер назад по истории вместо того, чтобы упереться.
+`scroll-snap-align:start`, а не `center` — при `center` первая карточка
+на нулевой прокрутке не может встать по центру и подрезается краем.
+
+- [ ] **Step 4: Убрать осиротевшее правило из CSS**
+
+`data-cols` был единственным носителем атрибута, поэтому правило в
+медиазапросе стало мёртвым. Найти и удалить:
+
+```bash
+grep -n 'data-cols' web/index.html
+```
+
+Ожидается одна строка — `[data-cols]{columns:1!important}` внутри
+`@media`. Удалить только этот селектор с его блоком, соседние правила
+в том же медиазапросе не трогать. После правки `grep` не находит ничего.
+
+- [ ] **Step 5: Проверить**
+
+Run: `PYTHONIOENCODING=utf-8 python -m pytest tests/test_landing.py -q`
+Expected: PASS — включая `test_reviews_are_a_swipe_track`. Тест
+`test_no_javascript` обязан остаться зелёным: лента не приносит скриптов.
+
+- [ ] **Step 6: Коммит**
+
+```bash
+git add web/index.html
+git commit -m "Отзывы горизонтальной лентой: свайп на scroll-snap, без JS"
+```
+
+---
+
+### Task 9: Удалить web/legal/ и переписать README
 
 **Files:**
 - Delete: `web/legal/oferta.html`, `privacy.html`, `consent.html`, `crypto.html`, `legal.css`
@@ -679,7 +785,10 @@ git rm -r web/legal
   в CSS, иначе презентационная подсказка перебивает `aspect-ratio`;
 - `og.jpg` — отдельный кадр 1200×630, в самой странице не используется;
 - на странице нет и не должно появляться JS: аккордеон держится на
-  `<details name="faq">`, ховеры — на классах `.btn-accent` / `.btn-invert`;
+  `<details name="faq">`, ховеры — на классах `.btn-accent` / `.btn-invert`,
+  лента отзывов — на `scroll-snap` (`.reviews-track` / `.review-card`);
+- у ленты отзывов обязателен `overscroll-behavior-x:contain` — без него
+  свайп до конца уводит iOS назад по истории;
 - юр-тексты живут только в Google Docs, копий в репозитории больше нет;
 - `?start=site` бот пока не разбирает — человек попадёт на главный экран.
 
@@ -697,7 +806,7 @@ git commit -m "Удалены web/legal: юр-тексты живут в Google 
 
 ---
 
-### Task 9: Проверка в браузере
+### Task 10: Проверка в браузере
 
 Тесты проверяют структуру, но не то, как страница выглядит. Этот шаг —
 единственный, где смотрим глазами.
@@ -738,13 +847,23 @@ FAQ на месте, футер содержит четыре ссылки (тр
 Кликнуть по второму вопросу: он раскрывается, первый закрывается.
 Кликнуть по нему же ещё раз: закрывается.
 
-- [ ] **Step 5: Проверить обе ширины**
+- [ ] **Step 5: Проверить ленту отзывов**
+
+На ширине `mobile`: пролистать отзывы вбок — карточки прокручиваются,
+встают по левому краю, полосы прокрутки не видно. Проверить, что вертикальная
+прокрутка страницы при этом не ломается. На `desktop` лента листается
+горизонтальной прокруткой трекпада и `Shift`+колесо.
+
+Клавиатура: `Tab` доводит фокус до ленты (виден контур), стрелки влево-вправо
+листают карточки.
+
+- [ ] **Step 6: Проверить обе ширины**
 
 `resize_window` пресетом `mobile`, перезагрузить, снять скриншот;
 затем `desktop`, снять скриншот. На обеих ширинах страница не скроллится
 вбок, портрет не растянут.
 
-- [ ] **Step 6: Коммит, если что-то правилось**
+- [ ] **Step 7: Коммит, если что-то правилось**
 
 ```bash
 git add web/index.html
@@ -757,7 +876,8 @@ git commit -m "Правки после проверки страницы в бр
 
 - `PYTHONIOENCODING=utf-8 python -m pytest -q` — всё зелёное.
 - В `web/index.html` нет `<script>`, `{{`, `sc-camel-on-click`, `style-hover`,
-  `font-family: Inter`, `href="#"`.
+  `font-family: Inter`, `href="#"`, `columns:2`, `break-inside`, `data-cols`.
+- Отзывы листаются вбок на телефоне и на десктопе, без JS.
 - Страница открывается локально без ошибок в консоли и без 404.
 - `web/legal/` удалён, `web/README.md` описывает новую страницу.
 - Ветка `feature/web-redesign-v5` готова к PR.
