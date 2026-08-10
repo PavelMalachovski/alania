@@ -62,7 +62,9 @@ def test_legal_links_point_to_google_docs():
 
 
 def test_channel_link_returned():
-    assert "https://t.me/alania_sky" in html()
+    """Проверка идёт по href целиком: голая подстрока https://t.me/alania_sky
+    является префиксом ссылки на бота alania_sky_bot и зеленела бы ложно."""
+    assert 'href="https://t.me/alania_sky"' in html()
 
 
 def test_reviews_are_a_swipe_track():
