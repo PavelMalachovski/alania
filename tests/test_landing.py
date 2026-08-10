@@ -67,6 +67,24 @@ def test_channel_link_returned():
     assert 'href="https://t.me/alania_sky"' in html()
 
 
+def test_head_carries_seo_and_preview():
+    """Ссылку на сайт шлют в Telegram — без og-блока она не развернётся
+    в превью, а og.jpg собирается и весит, но никем не используется."""
+    page = html()
+    for needle in ('name="description"', 'rel="canonical"',
+                   'property="og:title"', 'property="og:image"',
+                   'name="twitter:card"', "assets/og.jpg"):
+        assert needle in page, f"в head нет {needle}"
+
+
+def test_exactly_one_h1_and_it_has_text():
+    """В бандле два ПУСТЫХ h1, а имя лежало в h2 — страница уехала бы
+    в прод без единого заголовка первого уровня."""
+    h1s = re.findall(r"<h1\b[^>]*>(.*?)</h1>", html(), re.S)
+    assert len(h1s) == 1, f"ожидается один h1, найдено {len(h1s)}"
+    assert re.sub(r"<[^>]+>", "", h1s[0]).strip(), "h1 пустой"
+
+
 def test_reviews_are_a_swipe_track():
     """Отзывы листаются вбок нативным scroll-snap, без JS."""
     page = html()
