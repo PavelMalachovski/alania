@@ -245,6 +245,14 @@ ul{margin:0;padding:0;list-style:none}
   [data-cols]{columns:1!important}
   [data-nav]{display:none!important}
 }
+.faq-item{background:#fff;border-radius:14px;overflow:hidden}
+.faq-item summary{display:flex;gap:20px;align-items:baseline;
+  justify-content:space-between;padding:24px 28px;cursor:pointer;
+  font-size:1.02rem;color:#1C1C2E;list-style:none}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:"+";color:#C8705A;font-size:1.3rem;
+  line-height:1;flex:none}
+.faq-item[open] summary::after{content:"–"}
 </style>
 </head>
 <body>
@@ -615,42 +623,30 @@ ul{margin:0;padding:0;list-style:none}
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Частые вопросы</h2>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px">
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t0 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>Сомневаюсь, подойдёт ли мне ваш метод</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m0 }}</span>
-          </div>
-          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d0 }}"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Главное преимущество моего подхода — в гибкости и ориентации на базовые механизмы работы нервной системы. Мой метод — не жёсткая абстрактная схема, а интеграция академической психологии, коучинга и телесной практики.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Мозг и нервная система всех людей функционируют по единым законам нейропластичности, но путь решения всегда подбирается индивидуально.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);"><span style="font-weight: 600;">Почему вы можете быть уверены в безопасности и эффективности:</span></p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; font-size: 17.2px; background-color: rgb(234, 232, 226);"><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Метод адаптируется под вас, а не наоборот.</span> Если вам сложно говорить о чувствах, мы начнём с телесных реакций или логического анализа сценариев. Если вам нужно сначала всё обдумать и зайти через логическое понимание — подключим коучинговые инструменты и работу с состоянием.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Я работаю с глубокими причинами, а не с симптомами.</span> Даже если ваш запрос кажется необычным или запутанным, в его основе всегда лежат базовые психологические и телесные зажимы. Работа ведётся на уровне первопричин, поэтому метод универсален для большинства жизненных ситуаций.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Вход без рисков через диагностическую сессию.</span> Вам не нужно принимать решение о долгосрочной работе вслепую. На первой встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос эффективнее проработать у специалиста другого профиля (например, смежного медицинского направления), я честно и открыто скажу вам об этом и порекомендую проверенных коллег.</li></ul><p style="margin: 1rem 0px 0px; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Лучший способ проверить — прийти на первую сессию и составить личное впечатление о контакте и методе.</p></div>
-        </div>
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t1 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>Что если я не могу чётко сформулировать свой запрос?</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m1 }}</span>
-          </div>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d1 }}">Это нормально и часто бывает. Первая часть сессии — глубинная диагностика: мы вместе структурируем то, что есть, и находим настоящий запрос.</p>
-        </div>
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t2 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>С какими запросами работает Лана?</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m2 }}</span>
-          </div>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d2 }}">Тревога и напряжение, самооценка, эмоциональные состояния, поведение и привычки, отношения, личностные процессы, проявленность и жизненный ресурс — полный список выше в разделе «Запросы, с которыми я работаю».</p>
-        </div>
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t3 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>Можно ли решить мой запрос самостоятельно?</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m3 }}</span>
-          </div>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d3 }}">Иногда да. Но собственные слепые зоны сложно увидеть изнутри: работа со специалистом заметно сокращает путь и помогает не возвращаться к старым сценариям.</p>
-        </div>
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t4 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>Как оплатить из-за границы и в какой валюте?</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m4 }}</span>
-          </div>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d4 }}">Стоимость сессии — 100 € или 10 000 ₽. Оплата проходит в Telegram-боте; если удобный способ не отображается, напишите мне в личные сообщения.</p>
-        </div>
-        <div style="background:#fff;border-radius:14px;overflow:hidden">
-          <div sc-camel-on-click="{{ t5 }}" style="display:flex;gap:20px;align-items:baseline;justify-content:space-between;padding:24px 28px;cursor:pointer;font-size:1.02rem;color:#1C1C2E">
-            <span>Есть ли возможность рассрочки?</span><span style="color:#C8705A;font-size:1.3rem;line-height:1">{{ m5 }}</span>
-          </div>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560;display:{{ d5 }}">Сессия оплачивается разово при записи. По индивидуальным условиям оплаты напишите мне в личные сообщения.</p>
-        </div>
+        <details class="faq-item" name="faq" open>
+          <summary>Сомневаюсь, подойдёт ли мне ваш метод</summary>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Главное преимущество моего подхода — в гибкости и ориентации на базовые механизмы работы нервной системы. Мой метод — не жёсткая абстрактная схема, а интеграция академической психологии, коучинга и телесной практики.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Мозг и нервная система всех людей функционируют по единым законам нейропластичности, но путь решения всегда подбирается индивидуально.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);"><span style="font-weight: 600;">Почему вы можете быть уверены в безопасности и эффективности:</span></p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; font-size: 17.2px; background-color: rgb(234, 232, 226);"><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Метод адаптируется под вас, а не наоборот.</span> Если вам сложно говорить о чувствах, мы начнём с телесных реакций или логического анализа сценариев. Если вам нужно сначала всё обдумать и зайти через логическое понимание — подключим коучинговые инструменты и работу с состоянием.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Я работаю с глубокими причинами, а не с симптомами.</span> Даже если ваш запрос кажется необычным или запутанным, в его основе всегда лежат базовые психологические и телесные зажимы. Работа ведётся на уровне первопричин, поэтому метод универсален для большинства жизненных ситуаций.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Вход без рисков через диагностическую сессию.</span> Вам не нужно принимать решение о долгосрочной работе вслепую. На первой встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос эффективнее проработать у специалиста другого профиля (например, смежного медицинского направления), я честно и открыто скажу вам об этом и порекомендую проверенных коллег.</li></ul><p style="margin: 1rem 0px 0px; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); font-family: Inter, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, sans-serif; background-color: rgb(234, 232, 226);">Лучший способ проверить — прийти на первую сессию и составить личное впечатление о контакте и методе.</p></div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>Что если я не могу чётко сформулировать свой запрос?</summary>
+          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Это нормально и часто бывает. Первая часть сессии — глубинная диагностика: мы вместе структурируем то, что есть, и находим настоящий запрос.</p>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>С какими запросами работает Лана?</summary>
+          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Тревога и напряжение, самооценка, эмоциональные состояния, поведение и привычки, отношения, личностные процессы, проявленность и жизненный ресурс — полный список выше в разделе «Запросы, с которыми я работаю».</p>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>Можно ли решить мой запрос самостоятельно?</summary>
+          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Иногда да. Но собственные слепые зоны сложно увидеть изнутри: работа со специалистом заметно сокращает путь и помогает не возвращаться к старым сценариям.</p>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>Как оплатить из-за границы и в какой валюте?</summary>
+          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Стоимость сессии — 100 € или 10 000 ₽. Оплата проходит в Telegram-боте; если удобный способ не отображается, напишите мне в личные сообщения.</p>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>Есть ли возможность рассрочки?</summary>
+          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Сессия оплачивается разово при записи. По индивидуальным условиям оплаты напишите мне в личные сообщения.</p>
+        </details>
       </div>
     </div>
   </section>
