@@ -260,6 +260,20 @@ ul{margin:0;padding:0;list-style:none}
 .reviews-track::-webkit-scrollbar{display:none}
 .reviews-track:focus-visible{outline:2px solid #C8705A;outline-offset:4px}
 .review-card{flex:0 0 min(420px,82vw);scroll-snap-align:start}
+.reviews-rail{position:relative}
+.reviews-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:2;
+  display:none;align-items:center;justify-content:center;
+  width:44px;height:44px;border-radius:50%;border:1px solid #E8DDD4;
+  background:#fff;color:#C8705A;font-size:1.35rem;line-height:1;cursor:pointer;
+  box-shadow:0 4px 16px -6px rgba(107,101,96,0.35);
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease),opacity var(--dur) var(--ease)}
+/* Только для мыши: на тачскрине лента листается пальцем, стрелки лишние. */
+@media (hover:hover) and (pointer:fine){.reviews-arrow{display:flex}}
+.reviews-arrow--prev{left:-14px}
+.reviews-arrow--next{right:-14px}
+.reviews-arrow:hover{background:#C8705A;color:#fff}
+.reviews-arrow:disabled{opacity:0;pointer-events:none}
+.reviews-arrow:focus-visible{outline:2px solid #C8705A;outline-offset:3px}
 </style>
 </head>
 <body>
@@ -425,27 +439,30 @@ ul{margin:0;padding:0;list-style:none}
         <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#E0A48F">Результат</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#fff">Что вы получаете в результате работы</h2>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:36px 44px">
-        <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
+      <div data-stack style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:36px 44px;align-items:start">
+        <div data-stack style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px 40px;align-content:start">
+          <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.3rem;color:#fff">Устойчивость вместо временного эффекта</h3>
           <p style="font-size:1rem;line-height:1.7;color:rgba(255,255,255,0.78)">Вы меняете саму логику выбора и реакций, а не просто маскируете симптомы.</p>
         </div>
-        <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
+          <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.3rem;color:#fff">Навык саморегуляции</h3>
           <p style="font-size:1rem;line-height:1.7;color:rgba(255,255,255,0.78)">Осваиваете практические инструменты работы с тревогой и телом, которые остаются с вами навсегда.</p>
-        </div><div style="display:flex;gap:16px;align-items:baseline;margin-top:6px;border-left:2px solid #C8705A;padding-left:18px">
-            <span style="font-family:'Prata',Georgia,serif;font-size:2rem;color:#E0A48F;line-height:1"><b>66 дней</b></span><span style="font-size:0.85rem;line-height:1.5;color:rgba(255,255,255,0.6)"><p class="study__src" style="margin: 0px 0px 1.1rem; font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(234, 232, 226, 0.95); font-style: italic; line-height: 1.6;">Исследование нейропластичности</p><span style="color: rgba(234, 232, 226, 0.95); font-size: 1rem; font-style: italic;">Согласно масштабному исследованию доктора Филиппы Лэлли (Phillippa Lally) из Университетского колледжа Лондона (UCL), для формирования устойчивых новых нейронных связей и автоматических моделей поведения в среднем требуется 66 дней. За этот период мозг укрепляет новые нейронные магистрали, а нервная система полностью адаптируется к новому состоянию, убирая старые реакции стресса.<br></span>средний срок формирования привычки<br>(Исследование Университетского колледжа Лондона)</span>
-            
-          </div><div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
+        </div>
+          <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.3rem;color:#fff">Научный подход к фундаментальным изменениям</h3><p style="font-size:1rem;line-height:1.7;color:rgba(255,255,255,0.78)">Разовые озарения дают временный эмоциональный подъём, но настоящая трансформация требует физических изменений в нейронных связях.</p>
           
           
         </div>
-        <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
+          <div style="display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.22);padding-top:22px">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.3rem;color:#fff">Автономия</h3>
           <p style="font-size:1rem;line-height:1.7;color:rgba(255,255,255,0.78)">Переходите из состояния внешней зависимости в состояние полного мастера своей жизни.</p>
         </div>
-        
+        </div>
+        <div style="display:flex;gap:16px;align-items:baseline;border-left:2px solid #C8705A;padding-left:18px">
+            <span style="font-family:'Prata',Georgia,serif;font-size:2rem;color:#E0A48F;line-height:1"><b>66 дней</b></span><span style="font-size:0.85rem;line-height:1.5;color:rgba(255,255,255,0.6)"><p class="study__src" style="margin: 0px 0px 1.1rem; font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(234, 232, 226, 0.95); font-style: italic; line-height: 1.6;">Исследование нейропластичности</p><span style="color: rgba(234, 232, 226, 0.95); font-size: 1rem; font-style: italic;">Согласно масштабному исследованию доктора Филиппы Лэлли (Phillippa Lally) из Университетского колледжа Лондона (UCL), для формирования устойчивых новых нейронных связей и автоматических моделей поведения в среднем требуется 66 дней. За этот период мозг укрепляет новые нейронные магистрали, а нервная система полностью адаптируется к новому состоянию, убирая старые реакции стресса.<br></span>средний срок формирования привычки<br>(Исследование Университетского колледжа Лондона)</span>
+            
+          </div>
       </div>
     </div>
   </section>
@@ -457,7 +474,8 @@ ul{margin:0;padding:0;list-style:none}
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Что говорят мои клиенты</h2>
         <p style="font-size:0.95rem;line-height:1.7;color:#6B6560">Все отзывы публикуются строго с согласия клиентов, с сохранением их конфиденциальности.</p>
       </div>
-      <div class="reviews-track" tabindex="0" role="group" aria-label="Отзывы клиентов">
+      <div class="reviews-rail">
+        <div class="reviews-track" id="reviews-track" tabindex="0" role="group" aria-label="Отзывы клиентов">
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Я пришла с запросом про отношения, который мучил меня годами. Мы не только его распутали — я увидела то, чего не видела раньше: свою слепую зону, которая направляла меня искать решение совсем в другую сторону. Получился полный обзор ситуации и чувство завершённости в конце, как будто ты сам погрузился в себя и нашёл все ответы, только здесь это происходит за одну сессию.</span></p>
@@ -493,6 +511,9 @@ ul{margin:0;padding:0;list-style:none}
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Точно мои ощущения описали. Чувствую, что есть огонь внутри, но как и куда направить — затык. Однако мне всё чаще стали попадаться очень нужные в моменте люди.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
+      </div>
+        <button type="button" class="reviews-arrow reviews-arrow--prev" aria-label="Предыдущие отзывы" aria-controls="reviews-track">‹</button>
+        <button type="button" class="reviews-arrow reviews-arrow--next" aria-label="Следующие отзывы" aria-controls="reviews-track">›</button>
       </div>
     </div>
   </section>
@@ -630,7 +651,7 @@ ul{margin:0;padding:0;list-style:none}
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Частые вопросы</h2>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px">
-        <details class="faq-item" name="faq" open>
+        <details class="faq-item" name="faq">
           <summary>Сомневаюсь, подойдёт ли мне ваш метод</summary>
           <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Главное преимущество моего подхода — в гибкости и ориентации на базовые механизмы работы нервной системы. Мой метод — не жёсткая абстрактная схема, а интеграция академической психологии, коучинга и телесной практики.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Мозг и нервная система всех людей функционируют по единым законам нейропластичности, но путь решения всегда подбирается индивидуально.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);"><span style="font-weight: 600;">Почему вы можете быть уверены в безопасности и эффективности:</span></p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-size: 17.2px;"><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Метод адаптируется под вас, а не наоборот.</span> Если вам сложно говорить о чувствах, мы начнём с телесных реакций или логического анализа сценариев. Если вам нужно сначала всё обдумать и зайти через логическое понимание — подключим коучинговые инструменты и работу с состоянием.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Я работаю с глубокими причинами, а не с симптомами.</span> Даже если ваш запрос кажется необычным или запутанным, в его основе всегда лежат базовые психологические и телесные зажимы. Работа ведётся на уровне первопричин, поэтому метод универсален для большинства жизненных ситуаций.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Вход без рисков через диагностическую сессию.</span> Вам не нужно принимать решение о долгосрочной работе вслепую. На первой встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос эффективнее проработать у специалиста другого профиля (например, смежного медицинского направления), я честно и открыто скажу вам об этом и порекомендую проверенных коллег.</li></ul><p style="margin: 1rem 0px 0px; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Лучший способ проверить — прийти на первую сессию и составить личное впечатление о контакте и методе.</p></div>
         </details>
@@ -683,4 +704,27 @@ ul{margin:0;padding:0;list-style:none}
     <div style="max-width:1180px;margin:clamp(36px,5vw,60px) auto 0;border-top:1px solid rgba(255,255,255,0.16);padding:22px 0 28px;font-size:0.8rem;color:rgba(255,255,255,0.55)">© 2026 Лана Леонович. Все права защищены.</div>
   </footer>
 </div>
+<script>
+/* Единственный скрипт на странице. На десктопе свайпа нет, а полоса
+   прокрутки у ленты скрыта — без стрелок она не листается ничем, кроме
+   Shift+колесо. Всё остальное на странице работает без JS. */
+(function () {
+  var track = document.getElementById('reviews-track');
+  if (!track) return;
+  var prev = document.querySelector('.reviews-arrow--prev');
+  var next = document.querySelector('.reviews-arrow--next');
+  var card = track.querySelector('.review-card');
+  function step() { return card ? card.getBoundingClientRect().width + 20 : track.clientWidth; }
+  function sync() {
+    var max = track.scrollWidth - track.clientWidth;
+    prev.disabled = track.scrollLeft < 1;
+    next.disabled = track.scrollLeft > max - 1;
+  }
+  prev.addEventListener('click', function () { track.scrollBy({ left: -step(), behavior: 'smooth' }); });
+  next.addEventListener('click', function () { track.scrollBy({ left: step(), behavior: 'smooth' }); });
+  track.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+  sync();
+})();
+</script>
 </body></html>

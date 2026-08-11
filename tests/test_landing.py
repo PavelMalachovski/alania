@@ -21,9 +21,40 @@ def test_page_exists():
     assert PAGE.is_file(), "web/index.html не собран"
 
 
-def test_no_javascript():
-    """React выброшен целиком: ни одного script на странице."""
-    assert "<script" not in html().lower()
+def test_no_framework_only_tiny_inline_script():
+    """React выброшен целиком, внешних скриптов нет. Единственный
+    оставшийся — инлайновая обвязка стрелок ленты отзывов: на десктопе
+    свайпа нет, а полосу прокрутки у ленты мы прячем, поэтому без стрелок
+    она не листается ничем, кроме Shift+колесо. Тест сторожит, чтобы
+    скрипт не разросся и чтобы фреймворк не вернулся."""
+    page = html()
+    assert "<script src" not in page, "внешних скриптов быть не должно"
+    assert page.count("<script") == 1, "ровно один инлайновый скрипт"
+    assert "react" not in page.lower()
+    body = re.search(r"<script>(.*?)</script>", page, re.S).group(1)
+    assert len(body) < 1400, f"скрипт разросся до {len(body)} символов"
+
+
+def test_reviews_have_arrow_controls():
+    """Стрелки — единственный способ пролистать ленту мышью."""
+    page = html()
+    assert 'class="reviews-arrow reviews-arrow--prev"' in page
+    assert 'class="reviews-arrow reviews-arrow--next"' in page
+    assert 'aria-label="Предыдущие отзывы"' in page
+    assert 'aria-label="Следующие отзывы"' in page
+    # показываются только мыши: на тачскрине листают пальцем
+    assert "@media (hover:hover) and (pointer:fine){.reviews-arrow{display:flex}}" in page
+
+
+def test_result_section_columns_do_not_stretch():
+    """Четыре карточки «Результата» лежат своей сеткой 2x2 слева, блок
+    про 66 дней — отдельной колонкой справа. Раньше все пятеро были в
+    одной сетке, и высокий блок задирал высоту ряда: под верхними
+    карточками зияли дыры в пол-экрана."""
+    page = html()
+    assert "grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)" in page
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in page
+    assert "align-items:start" in page
 
 
 def test_no_runtime_placeholders():
@@ -37,9 +68,12 @@ def test_faq_is_native_details():
     page = html()
     assert page.count("<details") == 6, "шесть вопросов FAQ"
     assert page.count('name="faq"') == 6, "эксклюзивный аккордеон"
-    # порядок атрибутов у <details> не фиксируем — ищем регуляркой
+    # В бандле первый вопрос был раскрыт (state.open стартовал с нуля).
+    # По решению владельца FAQ открывается свёрнутым: раскрытый ответ
+    # оттягивал на себя внимание и удлинял секцию на первый взгляд.
+    # Порядок атрибутов у <details> не фиксируем — ищем регуляркой.
     opened = re.findall(r"<details\b[^>]*\bopen\b", page)
-    assert len(opened) == 1, "раскрыт ровно первый вопрос"
+    assert not opened, "все вопросы свёрнуты по умолчанию"
 
 
 def test_fonts_are_self_hosted():
