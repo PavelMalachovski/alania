@@ -2,19 +2,19 @@
 <html lang="ru"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Лана Леонович — психолог, коуч, телесный практик. Консультации онлайн</title>
+<title>Лана Леонович – психолог, коуч, телесный практик. Консультации онлайн</title>
 <meta name="description" content="Индивидуальные онлайн-сессии: классическая психология, коучинг и работа с телом. 70 минут, видеозвонок. Запись через Telegram-бот.">
 <meta name="theme-color" content="#FAFAF7">
 <link rel="canonical" href="https://alania.vercel.app/">
 
 <!-- Превью при пересылке ссылки. Адреса обязаны быть абсолютными: на
-     относительные мессенджеры не ходят. og.jpg — отдельный кадр 1200×630,
+     относительные мессенджеры не ходят. og.jpg – отдельный кадр 1200×630,
      а не lana.jpg: тот портретный, и предпросмотр обрезал бы его по центру.
      Формат jpg, потому что webp собирают в превью не все клиенты. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Лана Леонович">
 <meta property="og:url" content="https://alania.vercel.app/">
-<meta property="og:title" content="Лана Леонович — психолог, коуч, телесный практик">
+<meta property="og:title" content="Лана Леонович – психолог, коуч, телесный практик">
 <meta property="og:description" content="Психология, коучинг и работа с телом в одном подходе. Индивидуальная сессия 70 минут онлайн.">
 <meta property="og:image" content="https://alania.vercel.app/assets/og.jpg">
 <meta property="og:image:width" content="1200">
@@ -26,7 +26,7 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/golos-cyrillic.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/prata-cyrillic.woff2">
-<!-- Фото в герое — самый крупный элемент первого экрана. Без preload
+<!-- Фото в герое – самый крупный элемент первого экрана. Без preload
      браузер добирается до него только после разбора стилей. -->
 <link rel="preload" as="image" href="assets/lana.webp" type="image/webp" fetchpriority="high">
 <style>/* cyrillic-ext */
@@ -241,6 +241,9 @@ p{margin:0}
 h1,h2,h3{margin:0;font-weight:400}
 ul{margin:0;padding:0;list-style:none}
 @media (max-width:900px){
+  /* На телефоне портрет идёт первым — лицо до текста, — и вдвое уже:
+     на всю ширину он занимал бы весь первый экран. */
+  .hero-photo{order:-1;width:50%;margin:0 auto}
   [data-stack]{grid-template-columns:1fr!important}
   [data-nav]{display:none!important}
 }
@@ -302,13 +305,13 @@ ul{margin:0;padding:0;list-style:none}
         <li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Дипломированный практикующий психолог</li>
         <li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Коуч</li>
         <li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Телесно-ориентированный практик</li>
-      </ul><p style="max-width:34rem;font-size:1.06rem;line-height:1.7;color:#6B6560"><span style="color: rgb(42, 45, 51); font-size: 20.48px;">В своей практике объединяю классические психологические методы, коучинговый подход и эффективную работу с телом и энергией.<br><br></span><span style="color: rgb(42, 45, 51); font-size: 17.2px;">Это позволяет подходить к ситуации комплексно: от анализа глубоких паттернов до восстановления физического ресурса и состояния устойчивости.</span><span style="color: rgb(42, 45, 51); font-size: 20.48px;"></span></p>
+      </ul><p style="max-width:34rem;font-size:1.06rem;line-height:1.7;color:#6B6560"><span>В своей практике объединяю классические психологические методы, коучинговый подход и эффективную работу с телом и энергией.<br><br></span><span>Это позволяет подходить к ситуации комплексно: от анализа глубоких паттернов до восстановления физического ресурса и состояния устойчивости.</span></p>
       <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:4px">
         <a href="https://t.me/alania_sky_bot?start=site" target="_blank" rel="noopener" style="background:#2B3366;color:#fff;padding:15px 28px;border-radius:12px;font-size:0.95rem;font-weight:500;transition:background 0.25s ease" class="btn-accent">Записаться на сессию</a>
         <a href="#services" style="border:1px solid #C8705A;color:#C8705A;padding:15px 28px;border-radius:12px;font-size:0.95rem;font-weight:500;transition:all 0.25s ease" class="btn-accent">Посмотреть форматы</a>
       </div>
     </div>
-    <div style="position:relative;min-width:0">
+    <div class="hero-photo" style="position:relative;min-width:0">
       <div style="aspect-ratio:4/5;border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#F5EDE3,#E8DDD4);box-shadow:0 24px 60px -30px rgba(107,101,96,0.35)">
         <picture><source srcset="assets/lana.webp" type="image/webp"><img src="assets/lana.jpg" alt="Лана Леонович" width="1280" height="1600" style="width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block"></picture>
       </div>
@@ -319,7 +322,6 @@ ul{margin:0;padding:0;list-style:none}
   <section id="requests" style="background:#F5EDE3;padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">С чем я работаю</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Запросы, с которыми я работаю</h2>
         
       </div>
@@ -384,7 +386,7 @@ ul{margin:0;padding:0;list-style:none}
           </ul>
         </div>
       </div>
-      <p style="font-size:1.06rem;line-height:1.7;color:#6B6560"><span style="color: rgb(42, 45, 51); font-size: 20.48px;">Если вы сомневаетесь, подходит ли ваш запрос — можете сразу написать мне в личные сообщения или выбрать удобный слот для диагностики.</span></p><div style="display:flex;flex-wrap:wrap;gap:14px">
+      <p style="font-size:1.06rem;line-height:1.7;color:#6B6560"><span style="color: rgb(42, 45, 51); font-size: 20.48px;">Если вы сомневаетесь, подходит ли ваш запрос – можете сразу написать мне в личные сообщения или выбрать удобный слот для диагностики.</span></p><div style="display:flex;flex-wrap:wrap;gap:14px">
         <a href="https://t.me/alania_sky_bot?start=site" target="_blank" rel="noopener" style="background:#2B3366;color:#fff;padding:15px 28px;border-radius:12px;font-size:0.95rem;font-weight:500;transition:background 0.25s ease" class="btn-accent">Записаться</a>
         <a href="#services" style="border:1px solid #C8705A;color:#C8705A;padding:15px 28px;border-radius:12px;font-size:0.95rem;font-weight:500;transition:all 0.25s ease" class="btn-accent">Посмотреть форматы</a>
       </div>
@@ -394,10 +396,9 @@ ul{margin:0;padding:0;list-style:none}
   <section id="method" style="padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:46rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">О методе</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Комплексный подход: <br>психология + коучинг + тело</h2>
       </div>
-      <blockquote style="margin:0;border-left:2px solid #C8705A;padding:6px 0 6px 28px;max-width:46rem;font-family:'Prata',Georgia,serif;font-size:clamp(1.2rem,2.2vw,1.75rem);line-height:1.45;color:#2B3366"><span style="font-size: clamp(1.2rem, 2.2vw, 1.75rem);">Изменения не становятся устойчивыми, если работать только на одном уровне. Мой метод — интегральная система, которая объединяет сразу несколько.</span></blockquote>
+      <blockquote style="margin:0;border-left:2px solid #C8705A;padding:6px 0 6px 28px;max-width:46rem;font-family:'Prata',Georgia,serif;font-size:clamp(1.2rem,2.2vw,1.75rem);line-height:1.45;color:#2B3366"><span style="font-size: clamp(1.2rem, 2.2vw, 1.75rem);">Изменения не становятся устойчивыми, если работать только на одном уровне. Мой метод – интегральная система, которая объединяет сразу несколько.</span></blockquote>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
         <div style="background:#fff;border:1px solid #E8DDD4;border-radius:14px;padding:32px;display:flex;flex-direction:column;gap:16px;box-shadow:0 2px 24px -14px rgba(200,112,90,0.25)">
           <span style="font-family:'Prata',Georgia,serif;font-size:2rem;color:#C8705A;line-height:1">01</span>
@@ -436,7 +437,6 @@ ul{margin:0;padding:0;list-style:none}
   <section style="background:#2B3366;color:#fff;padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:44px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#E0A48F">Результат</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#fff">Что вы получаете в результате работы</h2>
       </div>
       <div data-stack style="display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:36px 44px;align-items:start">
@@ -459,9 +459,15 @@ ul{margin:0;padding:0;list-style:none}
           <p style="font-size:1rem;line-height:1.7;color:rgba(255,255,255,0.78)">Переходите из состояния внешней зависимости в состояние полного мастера своей жизни.</p>
         </div>
         </div>
-        <div style="display:flex;gap:16px;align-items:baseline;border-left:2px solid #C8705A;padding-left:18px">
-            <span style="font-family:'Prata',Georgia,serif;font-size:2rem;color:#E0A48F;line-height:1"><b>66 дней</b></span><span style="font-size:0.85rem;line-height:1.5;color:rgba(255,255,255,0.6)"><p class="study__src" style="margin: 0px 0px 1.1rem; font-size: 1rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(234, 232, 226, 0.95); font-style: italic; line-height: 1.6;">Исследование нейропластичности</p><span style="color: rgba(234, 232, 226, 0.95); font-size: 1rem; font-style: italic;">Согласно масштабному исследованию доктора Филиппы Лэлли (Phillippa Lally) из Университетского колледжа Лондона (UCL), для формирования устойчивых новых нейронных связей и автоматических моделей поведения в среднем требуется 66 дней. За этот период мозг укрепляет новые нейронные магистрали, а нервная система полностью адаптируется к новому состоянию, убирая старые реакции стресса.<br></span>средний срок формирования привычки<br>(Исследование Университетского колледжа Лондона)</span>
-            
+        <div style="border:1px solid rgba(224,164,143,0.38);border-radius:16px;padding:clamp(22px,2.4vw,30px);display:flex;flex-direction:column;gap:20px">
+            <div>
+              <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;color:#E0A48F;line-height:1"><b>66 дней</b></span>
+              <p style="margin:10px 0 0;font-size:0.85rem;line-height:1.5;color:rgba(255,255,255,0.6)">средний срок формирования привычки<br>(Исследование Университетского колледжа Лондона)</p>
+            </div>
+            <div style="border-top:1px solid rgba(224,164,143,0.28);padding-top:20px">
+              <p style="margin:0 0 0.9rem;font-size:0.78rem;letter-spacing:0.15em;text-transform:uppercase;color:rgba(234,232,226,0.95);font-style:italic;line-height:1.5">Исследование нейропластичности</p>
+              <p style="margin:0;color:rgba(234,232,226,0.95);font-size:0.97rem;font-style:italic;line-height:1.65">Согласно масштабному исследованию доктора Филиппы Лэлли (Phillippa Lally) из Университетского колледжа Лондона (UCL), для формирования устойчивых новых нейронных связей и автоматических моделей поведения в среднем требуется 66 дней. За этот период мозг укрепляет новые нейронные магистрали, а нервная система полностью адаптируется к новому состоянию, убирая старые реакции стресса.</p>
+            </div>
           </div>
       </div>
     </div>
@@ -470,7 +476,6 @@ ul{margin:0;padding:0;list-style:none}
   <section id="reviews" style="background:#F5EDE3;padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">Отзывы</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Что говорят мои клиенты</h2>
         <p style="font-size:0.95rem;line-height:1.7;color:#6B6560">Все отзывы публикуются строго с согласия клиентов, с сохранением их конфиденциальности.</p>
       </div>
@@ -478,38 +483,38 @@ ul{margin:0;padding:0;list-style:none}
         <div class="reviews-track" id="reviews-track" tabindex="0" role="group" aria-label="Отзывы клиентов">
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
-          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Я пришла с запросом про отношения, который мучил меня годами. Мы не только его распутали — я увидела то, чего не видела раньше: свою слепую зону, которая направляла меня искать решение совсем в другую сторону. Получился полный обзор ситуации и чувство завершённости в конце, как будто ты сам погрузился в себя и нашёл все ответы, только здесь это происходит за одну сессию.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Я пришла с запросом про отношения, который мучил меня годами. Мы не только его распутали – я увидела то, чего не видела раньше: свою слепую зону, которая направляла меня искать решение совсем в другую сторону. Получился полный обзор ситуации и чувство завершённости в конце, как будто ты сам погрузился в себя и нашёл все ответы, только здесь это происходит за одну сессию.</span></p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
 
-          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">За одну сессию я как будто выдохнула то, что не могла решить годами. Смогла увидеть, где сама себя блокирую в деньгах. И буквально на следующий день пришёл клиент, который молчал два месяца.</span></p><p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">За одну сессию я как будто выдохнула то, что не могла решить годами. Смогла увидеть, где сама себя блокирую в деньгах. И буквально на следующий день пришёл клиент, который молчал два месяца.</span></p><p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
-          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">До начала сессии у меня был сумбур в голове и не было конкретного запроса. Мне понравилось, что в ходе сессии мы смогли сжать его до одного конкретного. Мне важно ощущать себя в безопасности — я интроверт и не люблю напора. Всё было по делу, и благодаря этому я смогла расслабиться.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">До начала сессии у меня был сумбур в голове и не было конкретного запроса. Мне понравилось, что в ходе сессии мы смогли сжать его до одного конкретного. Мне важно ощущать себя в безопасности – я интроверт и не люблю напора. Всё было по делу, и благодаря этому я смогла расслабиться.</span></p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Простыми смыслами, тонким чувствованием мы смогли собрать недостающие паззлы и найти ключи к решению моей ситуации. Вовремя сказанные слова попадают в самое сердце и сажают семена, которые будут прорастать.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Благодаря сессии я увидела карту, по которой мне идти, при этом бережно относясь к своему состоянию.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
-          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Каждое твоё слово записала — именно то, что мне нужно было услышать, то, что вернуло меня к себе. Буду возвращаться.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Каждое твоё слово записала – именно то, что мне нужно было услышать, то, что вернуло меня к себе. Буду возвращаться.</span></p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
         <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
-          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Точно мои ощущения описали. Чувствую, что есть огонь внутри, но как и куда направить — затык. Однако мне всё чаще стали попадаться очень нужные в моменте люди.</span></p>
-          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
+          <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px;">Точно мои ощущения описали. Чувствую, что есть огонь внутри, но как и куда направить – затык. Однако мне всё чаще стали попадаться очень нужные в моменте люди.</span></p>
+          <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">– Клиентка</p>
         </div>
       </div>
         <button type="button" class="reviews-arrow reviews-arrow--prev" aria-label="Предыдущие отзывы" aria-controls="reviews-track">‹</button>
@@ -521,7 +526,6 @@ ul{margin:0;padding:0;list-style:none}
   <section id="services" style="padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">Услуги</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Услуги и форматы работы</h2>
       </div>
 
@@ -588,14 +592,13 @@ ul{margin:0;padding:0;list-style:none}
   <section style="background:#F5EDE3;padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">Запись</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Как записаться на сессию</h2>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
         <div style="background:#fff;border-radius:14px;padding:32px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="font-family:'Prata',Georgia,serif;font-size:2.6rem;line-height:1;color:#C8705A">01</span>
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.25rem;color:#1C1C2E">Перейдите в Telegram-бот</h3>
-          <p style="font-size:0.97rem;line-height:1.65;color:#6B6560">По кнопке ниже — бот откроется сразу на экране записи.</p>
+          <p style="font-size:0.97rem;line-height:1.65;color:#6B6560">По кнопке ниже – бот откроется сразу на экране записи.</p>
         </div>
         <div style="background:#fff;border-radius:14px;padding:32px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="font-family:'Prata',Georgia,serif;font-size:2.6rem;line-height:1;color:#C8705A">02</span>
@@ -617,13 +620,12 @@ ul{margin:0;padding:0;list-style:none}
   <section style="padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px">
       <div style="display:flex;flex-direction:column;gap:16px;max-width:44rem">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">Условия</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Условия работы</h2>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px">
         <div style="border:1px solid #E8DDD4;border-radius:14px;padding:30px;display:flex;flex-direction:column;gap:12px;background:#fff">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.2rem;color:#2B3366">Анонимность и конфиденциальность</h3>
-          <p style="font-size:0.97rem;line-height:1.7;color:#6B6560"><span style="color: rgb(67, 70, 77); font-size: 15.36px;">Все детали нашей работы остаются строго между нами. Никто не узнает о факте консультаций, если вы сами не захотите этим поделиться. При личной встрече вне сессий выбор — показывать факт знакомства или нет — остаётся исключительно за вами.</span></p>
+          <p style="font-size:0.97rem;line-height:1.7;color:#6B6560"><span style="color: rgb(67, 70, 77); font-size: 15.36px;">Все детали нашей работы остаются строго между нами. Никто не узнает о факте консультаций, если вы сами не захотите этим поделиться. При личной встрече вне сессий выбор – показывать факт знакомства или нет – остаётся исключительно за вами.</span></p>
         </div>
         <div style="border:1px solid #E8DDD4;border-radius:14px;padding:30px;display:flex;flex-direction:column;gap:12px;background:#fff">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.2rem;color:#2B3366">Переносы, отмены и опоздания</h3>
@@ -631,12 +633,12 @@ ul{margin:0;padding:0;list-style:none}
         </div>
         <div style="border:1px solid #E8DDD4;border-radius:14px;padding:30px;display:flex;flex-direction:column;gap:12px;background:#fff">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.2rem;color:#2B3366">Подготовка к встрече</h3>
-          <p style="font-size:0.97rem;line-height:1.7;color:#6B6560"><span style="color: rgb(67, 70, 77); font-size: 15.36px;">На сессию важно приходить в трезвом состоянии, выспавшимся, физически здоровым (если это не сессия по работе с телом и здоровьем) и с выполненными домашними заданиями — при их наличии.</span></p>
+          <p style="font-size:0.97rem;line-height:1.7;color:#6B6560"><span style="color: rgb(67, 70, 77); font-size: 15.36px;">На сессию важно приходить в трезвом состоянии, выспавшимся, физически здоровым (если это не сессия по работе с телом и здоровьем) и с выполненными домашними заданиями – при их наличии.</span></p>
         </div>
         <div style="border:1px solid #E8DDD4;border-radius:14px;padding:30px;display:flex;flex-direction:column;gap:12px;background:#fff">
           <h3 style="font-family:'Prata',Georgia,serif;font-size:1.2rem;color:#2B3366">Когда я могу отказать в сессии</h3>
           <ul style="display:flex;flex-direction:column;gap:10px;font-size:0.97rem;line-height:1.6;color:#6B6560">
-            <li style="display:flex;gap:10px"><span style="color: rgb(200, 112, 90);"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77);">Я могу отказать в проведении сессии, если на первой встрече проявится:</p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-size: 17.2px;"><li style="font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Отсутствие контакта и доверия.</span> Эффективная работа возможна только при наличии безопасного пространства и готовности открываться. Если я чувствую, что контакта не произошло, работа не принесёт результата. Сессии без доверия — это потеря времени для нас обоих.</li><li style="font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Запросы вне сферы моей компетенции.</span> В случаях, требующих медикаментозного лечения или клинической психиатрической помощи, — о чём я честно сообщаю на первой консультации.</li></ul></span></li>
+            <li style="display:flex;gap:10px"><span style="color: rgb(200, 112, 90);"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77);">Я могу отказать в проведении сессии, если на первой встрече проявится:</p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-size: 17.2px;"><li style="font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Отсутствие контакта и доверия.</span> Эффективная работа возможна только при наличии безопасного пространства и готовности открываться. Если я чувствую, что контакта не произошло, работа не принесёт результата. Сессии без доверия – это потеря времени для нас обоих.</li><li style="font-size: 0.96rem; line-height: 1.55; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Запросы вне сферы моей компетенции.</span> В случаях, требующих медикаментозного лечения или клинической психиатрической помощи, – о чём я честно сообщаю на первой консультации.</li></ul></span></li>
             
           </ul>
         </div>
@@ -647,33 +649,36 @@ ul{margin:0;padding:0;list-style:none}
   <section id="faq" style="background:#F5EDE3;padding:clamp(56px,8vw,110px) clamp(20px,5vw,56px)">
     <div style="max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:36px">
       <div style="display:flex;flex-direction:column;gap:16px">
-        <span style="font-size:0.72rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#C8705A">Вопросы</span>
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Частые вопросы</h2>
       </div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <details class="faq-item" name="faq">
           <summary>Сомневаюсь, подойдёт ли мне ваш метод</summary>
-          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Главное преимущество моего подхода — в гибкости и ориентации на базовые механизмы работы нервной системы. Мой метод — не жёсткая абстрактная схема, а интеграция академической психологии, коучинга и телесной практики.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Мозг и нервная система всех людей функционируют по единым законам нейропластичности, но путь решения всегда подбирается индивидуально.</p><p style="margin: 0px 0px 1.05em; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);"><span style="font-weight: 600;">Почему вы можете быть уверены в безопасности и эффективности:</span></p><ul style="margin: 0.9rem 0px 0px; color: rgb(42, 45, 51); font-size: 17.2px;"><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Метод адаптируется под вас, а не наоборот.</span> Если вам сложно говорить о чувствах, мы начнём с телесных реакций или логического анализа сценариев. Если вам нужно сначала всё обдумать и зайти через логическое понимание — подключим коучинговые инструменты и работу с состоянием.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Я работаю с глубокими причинами, а не с симптомами.</span> Даже если ваш запрос кажется необычным или запутанным, в его основе всегда лежат базовые психологические и телесные зажимы. Работа ведётся на уровне первопричин, поэтому метод универсален для большинства жизненных ситуаций.</li><li style="font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77); position: relative; padding: 0.5rem 0px 0.5rem 1.05rem;"><span style="font-weight: 600;">Вход без рисков через диагностическую сессию.</span> Вам не нужно принимать решение о долгосрочной работе вслепую. На первой встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос эффективнее проработать у специалиста другого профиля (например, смежного медицинского направления), я честно и открыто скажу вам об этом и порекомендую проверенных коллег.</li></ul><p style="margin: 1rem 0px 0px; font-size: 0.96rem; line-height: 1.6; color: rgb(67, 70, 77);">Лучший способ проверить — прийти на первую сессию и составить личное впечатление о контакте и методе.</p></div>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Главное преимущество моего подхода в его гибкости и ориентации на базовые механизмы работы нервной системы. Мой метод – это не жёсткая абстрактная схема, а интеграция академической психологии, коучинга и телесной практики.</p><p style="margin:0 0 0.9em">Мозг и нервная система всех людей функционируют по единым законам нейропластичности, но путь решения всегда подбирается индивидуально.</p><p style="margin:0 0 0.9em">Почему вы можете быть уверены в безопасности и эффективности:</p><ul style="margin:0 0 0.9em;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px"><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Метод адаптируется под вас, а не наоборот:</b> если вам сложно говорить о чувствах, мы начнём с телесных реакций или логического анализа сценариев. Если вам нужно сначала всё обдумать и зайти через логическое понимание – подключим коучинговые инструменты и работу с состоянием.</span></li><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Я работаю с глубокими причинами, а не с симптомами:</b> даже если ваш запрос кажется необычным или запутанным, в его основе всегда лежат базовые психологические и телесные зажимы. Работа ведётся на уровне первопричин, поэтому метод универсален для большинства жизненных ситуаций.</span></li><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Вход без рисков через установочную сессию:</b> вам не нужно принимать решение о долгосрочной работе «вслепую». На первой диагностической встрече мы подробно разбираем вашу ситуацию. Если я пойму, что ваш запрос эффективнее проработать у специалиста другого профиля (например, смежного медицинского направления), я честно и открыто скажу вам об этом и порекомендую проверенных коллег.</span></li></ul><p style="margin:0 0 0">Лучший способ проверить – зайти на первую сессию и составить личное впечатление о контакте и методе.</p></div>
         </details>
         <details class="faq-item" name="faq">
           <summary>Что если я не могу чётко сформулировать свой запрос?</summary>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Это нормально и часто бывает. Первая часть сессии — глубинная диагностика: мы вместе структурируем то, что есть, и находим настоящий запрос.</p>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0">Это абсолютно нормально. Часто клиенты приходят с фоновым «мне плохо / я запуталась». В ходе первой сессии мы структурируем ваши запросы и вместе формулируем точный вектор работы.</p></div>
         </details>
         <details class="faq-item" name="faq">
           <summary>С какими запросами работает Лана?</summary>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Тревога и напряжение, самооценка, эмоциональные состояния, поведение и привычки, отношения, личностные процессы, проявленность и жизненный ресурс — полный список выше в разделе «Запросы, с которыми я работаю».</p>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Я работаю с запросами, требующими глубокой перестройки внутренних состояний.</p><ul style="margin:0 0 0.9em;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px"><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Эмоциональная сфера и психофизиология:</b> панические атаки, фоновая тревожность, гиперконтроль, эмоциональное выгорание, депрессивные состояния и упадок сил.</span></li><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Самооценка и идентичность:</b> синдром самозванца, жёсткая самокритика, поиск себя, выход из повторяющихся деструктивных сценариев.</span></li><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Отношения и границы:</b> сложности в коммуникации, зависимые паттерны, страх проявленности и конфликтов.</span></li><li style="display:flex;gap:10px"><span style="color:#C8705A">—</span><span><b style="color:#1C1C2E">Реализация и автономия:</b> потеря ориентиров, сложности в принятии решений, переход на новый уровень доходов и пробивание «стеклянного потолка».</span></li></ul><p style="margin:0 0 0">Чтобы понять, смогу ли я быть вам полезна, мы проводим установочную сессию – важный этап, где я оцениваю ваш запрос, текущее состояние и подбираю наиболее безопасный и эффективный формат работы.</p></div>
         </details>
         <details class="faq-item" name="faq">
           <summary>Можно ли решить мой запрос самостоятельно?</summary>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Иногда да. Но собственные слепые зоны сложно увидеть изнутри: работа со специалистом заметно сокращает путь и помогает не возвращаться к старым сценариям.</p>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Короткий ответ – нет.</p><p style="margin:0 0 0.9em">Наш мозг и психика устроены так, чтобы защищать нас от повторного проживания болезненного опыта. Пытаясь докопаться до первопричины самостоятельно, вы неизбежно сталкиваетесь с мощными психологическими защитами: ум начнёт мастерски уводить внимание в сторону, подменять истинную боль логичными объяснениями и маскировать глубинную проблему за привычными сценариями и оправданиями.</p><p style="margin:0 0 0.9em">Обнаружить, подсветить и нейтрализовать слепую зону можно только в профессиональном контакте со специалистом.</p><p style="margin:0 0 0"><b style="color:#1C1C2E">Как это происходит в моей практике:</b> на индивидуальных сессиях создаётся безоценочное и безопасное пространство, в котором мы обходим сопротивление ума и выходим на тот уровень глубинного анализа и работы с телом, который невозможно пройти в одиночку.</p></div>
+        </details>
+        <details class="faq-item" name="faq">
+          <summary>Хочу задать вопрос Лане</summary>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Если у вас остался вопрос по вашей ситуации или формату работы, просто перейдите в Telegram-бот. В меню выберите опцию «Задать вопрос», и бот автоматически перенаправит ваше сообщение Лане.</p><p style="margin:0 0 0"><a href="https://t.me/alania_sky_bot?start=ask" target="_blank" rel="noopener" style="color:#C8705A;font-weight:500">Задать вопрос в боте ⇥</a></p></div>
         </details>
         <details class="faq-item" name="faq">
           <summary>Как оплатить из-за границы и в какой валюте?</summary>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Стоимость сессии — 100 € или 10 000 ₽. Оплата проходит в Telegram-боте; если удобный способ не отображается, напишите мне в личные сообщения.</p>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Все доступные варианты и способы оплаты можно посмотреть внутри бота.</p><p style="margin:0 0 0.9em"><a href="https://t.me/alania_sky_bot?start=site" target="_blank" rel="noopener" style="color:#C8705A;font-weight:500">Перейти в бот для выбора оплаты ⇥</a></p><p style="margin:0 0 0">Если среди предложенных способов вы не нашли подходящий для вашей страны или банка, напишите Лане напрямую через бот – она подберёт для вас персональный альтернативный вариант.</p></div>
         </details>
         <details class="faq-item" name="faq">
           <summary>Есть ли возможность рассрочки?</summary>
-          <p style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560">Сессия оплачивается разово при записи. По индивидуальным условиям оплаты напишите мне в личные сообщения.</p>
+          <div style="padding:0 28px 24px;font-size:0.97rem;line-height:1.7;color:#6B6560"><p style="margin:0 0 0.9em">Нет, я не работаю с форматами рассрочек.</p><p style="margin:0 0 0">Оплата услуг производится в полном объёме перед бронированием слота в календаре.</p></div>
         </details>
       </div>
     </div>
@@ -695,7 +700,7 @@ ul{margin:0;padding:0;list-style:none}
           <a href="https://docs.google.com/document/d/1CPsoI6U1nC1gN6O8_QanG1fi4-mSHa-w/preview" target="_blank" rel="noopener" style="color:rgba(255,255,255,0.8)">Информированное согласие</a>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:20px;font-size:0.9rem">
-          <a href="https://t.me/alania_sky" target="_blank" rel="noopener" style="color:#E0A48F">@alania.sky</a>
+          <a href="https://www.instagram.com/alania.sky?igsh=c2l3ZWZlbW81N2Ey&amp;utm_source=qr" target="_blank" rel="noopener" style="color:#E0A48F">@alania.sky</a>
           <a href="https://t.me/alania_sky" target="_blank" rel="noopener" style="color:#E0A48F">Бесплатный Telegram-канал</a>
           <a href="https://t.me/LanaLeonovich" target="_blank" rel="noopener" style="color:#E0A48F">Написать в личку</a>
         </div>
@@ -706,7 +711,7 @@ ul{margin:0;padding:0;list-style:none}
 </div>
 <script>
 /* Единственный скрипт на странице. На десктопе свайпа нет, а полоса
-   прокрутки у ленты скрыта — без стрелок она не листается ничем, кроме
+   прокрутки у ленты скрыта – без стрелок она не листается ничем, кроме
    Shift+колесо. Всё остальное на странице работает без JS. */
 (function () {
   var track = document.getElementById('reviews-track');
