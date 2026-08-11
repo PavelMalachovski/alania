@@ -17,7 +17,7 @@ CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
 # Форма /preview — read-only читалка: открывается прямо в браузере и не тянет
 # в приложение Docs, как /edit. Хвост исходных ссылок (?usp=drivesdk&ouid=…)
 # не нужен — доступ даёт сам id, а «&» в HTML-разметке сообщения лишний.
-# Те же тексты продублированы в web/legal/ — их использует лендинг.
+# Копий этих текстов в репозитории нет: и бот, и лендинг ссылаются сюда же.
 _GDOC = "https://docs.google.com/document/d/{}/preview"
 LEGAL_OFFER_URL = _GDOC.format("1uKkXGBah_qI0jlRUBaD0SyylDStKr2sP")
 LEGAL_PRIVACY_URL = _GDOC.format("1_ZJE1ejwbpGsbt3tkF89EyuyiA2WPeVm")
