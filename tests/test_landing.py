@@ -66,8 +66,8 @@ def test_no_runtime_placeholders():
 
 def test_faq_is_native_details():
     page = html()
-    assert page.count("<details") == 6, "шесть вопросов FAQ"
-    assert page.count('name="faq"') == 6, "эксклюзивный аккордеон"
+    assert page.count("<details") == 7, "семь вопросов FAQ"
+    assert page.count('name="faq"') == 7, "эксклюзивный аккордеон"
     # В бандле первый вопрос был раскрыт (state.open стартовал с нуля).
     # По решению владельца FAQ открывается свёрнутым: раскрытый ответ
     # оттягивал на себя внимание и удлинял секцию на первый взгляд.
@@ -95,12 +95,14 @@ def test_legal_links_point_to_google_docs():
         assert doc in page, f"нет ссылки на документ {doc}"
 
 
-def test_handle_label_points_to_channel():
-    """@alania.sky — хэндл канала, а не бота. В бандле эта ссылка вела
-    в бота и дублировала кнопку записи."""
+def test_handle_label_points_to_instagram():
+    """@alania.sky в футере — инстаграм. В бандле эта ссылка вела в бота
+    и дублировала кнопку записи; телеграм-канал живёт отдельной ссылкой
+    рядом (см. test_channel_link_returned)."""
     m = re.search(r'<a href="([^"]+)"[^>]*>@alania\.sky</a>', html())
     assert m, "не нашёл ссылку с подписью @alania.sky"
-    assert m.group(1) == "https://t.me/alania_sky", f"ведёт в {m.group(1)}"
+    assert m.group(1).startswith("https://www.instagram.com/alania.sky"), \
+        f"ведёт в {m.group(1)}"
 
 
 def test_channel_link_returned():
