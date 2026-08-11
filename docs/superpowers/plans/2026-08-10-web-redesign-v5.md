@@ -162,6 +162,23 @@ def test_channel_link_returned():
     assert 'href="https://t.me/alania_sky"' in html()
 
 
+def test_no_pasted_background_artifacts():
+    """Инлайновые background-color — следы вставки текста из редактора:
+    цвета СТАРОЙ палитры (#F4F3EF фарфоровый, #EAE8E2 жемчужный), которых
+    на этой странице больше нет. Рисуются серыми подложками под текстом.
+    Настоящие фоны в дизайне записаны как background:#… — их не трогаем."""
+    assert "background-color: rgb(" not in html()
+
+
+def test_list_markers_are_consistent():
+    """53 из 60 пунктов несут маркер-тире в терракоте, а регалии в герое —
+    сырую звёздочку, оставшуюся от markdown при вставке."""
+    lis = re.findall(r"<li[^>]*>(.*?)</li>", html(), re.S)
+    starred = [re.sub(r"<[^>]+>", "", x).strip()[:40]
+               for x in lis if re.sub(r"<[^>]+>", "", x).strip().startswith("*")]
+    assert not starred, f"пункты со звёздочкой: {starred}"
+
+
 def test_head_carries_seo_and_preview():
     """Ссылку на сайт шлют в Telegram — без og-блока она не развернётся
     в превью, а og.jpg собирается и весит, но никем не используется."""
@@ -896,7 +913,78 @@ git commit -m "Удалены web/legal: юр-тексты живут в Google 
 
 ---
 
-### Task 10: Проверка в браузере
+### Task 10: Убрать следы вставки текста
+
+Найдено проверкой в браузере. Того же рода мусор, что и `font-family: Inter`
+из Task 6, и из той же вставки текста из редактора — но этот виден глазом.
+
+**Files:**
+- Modify: `web/index.html`
+
+- [ ] **Step 1: Убрать инлайновые background-color**
+
+26 вхождений `background-color: rgb(…)`. Из них 15 — `rgb(234,232,226)`
+(`#EAE8E2`, жемчужный **старой** палитры), 10 — `rgb(244,243,239)`
+(`#F4F3EF`, фарфоровый **старой** палитры), 1 — `rgb(250,250,247)`
+(`#FAFAF7`, текущий фон, то есть no-op). Ни один из этих цветов новой
+палитре не принадлежит; на кремовом фоне они рисуются серыми подложками
+под кусками текста, будто по ним провели маркером.
+
+Настоящие фоны дизайна записаны иначе — `background:#fff`, `background:#C8705A`
+и т. п., 43 вхождения. Форма `background-color: rgb(` встречается
+**только** у мусора, так что признак однозначный:
+
+```python
+import re
+from pathlib import Path
+
+p = Path(r"C:/Git/alania/web/index.html")
+s = p.read_text(encoding="utf-8")
+before = len(re.findall(r"background-color:\s*rgb\([^)]*\);?\s*", s))
+s = re.sub(r"background-color:\s*rgb\([^)]*\);?\s*", "", s)
+p.write_text(s, encoding="utf-8")
+print("убрано:", before, "осталось:", s.count("background-color"))
+```
+
+Ожидается `убрано: 26 осталось: 0`.
+
+- [ ] **Step 2: Заменить звёздочки в регалиях на маркер-тире**
+
+В списке под именем все три пункта начинаются сырой `*` — остаток markdown.
+Остальные 53 пункта страницы несут маркер `<span style="color:#C8705A">—</span>`,
+и `gap` у `<li>` рассчитан как раз на отдельный элемент-маркер.
+
+Было (третий пункт вдобавок обёрнут двумя лишними span от той же вставки):
+
+```html
+<li style="display:flex;gap:12px;align-items:baseline">* Дипломированный практикующий психолог</li>
+<li style="display:flex;gap:12px;align-items:baseline">* Коуч</li>
+<li style="display:flex;gap:12px;align-items:baseline"><span style="color: rgb(200, 112, 90); font-size: 0.85rem;"><span style="color: rgb(28, 28, 46); font-size: 1rem;">* Телесно-ориентированный практик</span></span></li>
+```
+
+Стало:
+
+```html
+<li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Дипломированный практикующий психолог</li>
+<li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Коуч</li>
+<li style="display:flex;gap:12px;align-items:baseline"><span style="color:#C8705A">—</span>Телесно-ориентированный практик</li>
+```
+
+- [ ] **Step 3: Проверить**
+
+Run: `PYTHONIOENCODING=utf-8 python -m pytest -q`
+Expected: 116 passed — прежние 114 плюс два новых теста.
+
+- [ ] **Step 4: Коммит**
+
+```bash
+git add web/index.html tests/test_landing.py
+git commit -m "Убраны следы вставки: серые подложки старой палитры и звёздочки markdown"
+```
+
+---
+
+### Task 11: Проверка в браузере
 
 Тесты проверяют структуру, но не то, как страница выглядит. Этот шаг —
 единственный, где смотрим глазами.
