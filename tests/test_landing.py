@@ -66,8 +66,8 @@ def test_no_runtime_placeholders():
 
 def test_faq_is_native_details():
     page = html()
-    assert page.count("<details") == 7, "семь вопросов FAQ"
-    assert page.count('name="faq"') == 7, "эксклюзивный аккордеон"
+    assert page.count("<details") == 8, "восемь вопросов FAQ"
+    assert page.count('name="faq"') == 8, "эксклюзивный аккордеон"
     # В бандле первый вопрос был раскрыт (state.open стартовал с нуля).
     # По решению владельца FAQ открывается свёрнутым: раскрытый ответ
     # оттягивал на себя внимание и удлинял секцию на первый взгляд.
