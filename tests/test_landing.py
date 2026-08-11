@@ -77,8 +77,15 @@ def test_no_pasted_background_artifacts():
 
 def test_list_markers_are_consistent():
     """53 из 60 пунктов несут маркер-тире в терракоте, а регалии в герое —
-    сырую звёздочку, оставшуюся от markdown при вставке."""
-    lis = re.findall(r"<li[^>]*>(.*?)</li>", html(), re.S)
+    сырую звёздочку, оставшуюся от markdown при вставке.
+
+    \\b после li обязателен: без него [^>]* спокойно проглатывает "nk ..." из
+    <link> в head, нежадный DOTALL склеивает такой "<li>" со всем до первого
+    настоящего </li> в один гигантский матч, который не начинается с "*" —
+    и тест перестаёт видеть первый пункт регалий. Проверено на дореформенном
+    web/index.html (git show 568925d): старый вариант регулярки ловил 2
+    звёздочки из 3, с \\b — все три (см. task-10-cleanup-report.md)."""
+    lis = re.findall(r"<li\b[^>]*>(.*?)</li>", html(), re.S)
     starred = [re.sub(r"<[^>]+>", "", x).strip()[:40]
                for x in lis if re.sub(r"<[^>]+>", "", x).strip().startswith("*")]
     assert not starred, f"пункты со звёздочкой: {starred}"
