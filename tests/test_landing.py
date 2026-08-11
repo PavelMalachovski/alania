@@ -61,6 +61,14 @@ def test_legal_links_point_to_google_docs():
         assert doc in page, f"нет ссылки на документ {doc}"
 
 
+def test_handle_label_points_to_channel():
+    """@alania.sky — хэндл канала, а не бота. В бандле эта ссылка вела
+    в бота и дублировала кнопку записи."""
+    m = re.search(r'<a href="([^"]+)"[^>]*>@alania\.sky</a>', html())
+    assert m, "не нашёл ссылку с подписью @alania.sky"
+    assert m.group(1) == "https://t.me/alania_sky", f"ведёт в {m.group(1)}"
+
+
 def test_channel_link_returned():
     """Проверка идёт по href целиком: голая подстрока https://t.me/alania_sky
     является префиксом ссылки на бота alania_sky_bot и зеленела бы ложно."""
