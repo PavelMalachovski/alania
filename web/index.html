@@ -242,7 +242,6 @@ h1,h2,h3{margin:0;font-weight:400}
 ul{margin:0;padding:0;list-style:none}
 @media (max-width:900px){
   [data-stack]{grid-template-columns:1fr!important}
-  [data-cols]{columns:1!important}
   [data-nav]{display:none!important}
 }
 .faq-item{background:#fff;border-radius:14px;overflow:hidden}
@@ -255,6 +254,12 @@ ul{margin:0;padding:0;list-style:none}
 .faq-item[open] summary::after{content:"–"}
 .btn-accent:hover{background:#C8705A!important;color:#fff!important}
 .btn-invert:hover{background:#fff!important;color:#2B3366!important}
+.reviews-track{display:flex;gap:20px;overflow-x:auto;
+  scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  scrollbar-width:none;padding-bottom:6px}
+.reviews-track::-webkit-scrollbar{display:none}
+.reviews-track:focus-visible{outline:2px solid #C8705A;outline-offset:4px}
+.review-card{flex:0 0 min(420px,82vw);scroll-snap-align:start}
 </style>
 </head>
 <body>
@@ -452,38 +457,38 @@ ul{margin:0;padding:0;list-style:none}
         <h2 style="font-family:'Prata',Georgia,serif;font-size:clamp(1.75rem,3.1vw,2.7rem);line-height:1.16;letter-spacing:-0.01em;color:#1C1C2E">Что говорят мои клиенты</h2>
         <p style="font-size:0.95rem;line-height:1.7;color:#6B6560">Все отзывы публикуются строго с согласия клиентов, с сохранением их конфиденциальности.</p>
       </div>
-      <div data-cols="1" style="columns:2;column-gap:20px">
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+      <div class="reviews-track" tabindex="0" role="group" aria-label="Отзывы клиентов">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">Я пришла с запросом про отношения, который мучил меня годами. Мы не только его распутали — я увидела то, чего не видела раньше: свою слепую зону, которая направляла меня искать решение совсем в другую сторону. Получился полный обзор ситуации и чувство завершённости в конце, как будто ты сам погрузился в себя и нашёл все ответы, только здесь это происходит за одну сессию.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
-          
+
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">За одну сессию я как будто выдохнула то, что не могла решить годами. Смогла увидеть, где сама себя блокирую в деньгах. И буквально на следующий день пришёл клиент, который молчал два месяца.</span></p><p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">До начала сессии у меня был сумбур в голове и не было конкретного запроса. Мне понравилось, что в ходе сессии мы смогли сжать его до одного конкретного. Мне важно ощущать себя в безопасности — я интроверт и не люблю напора. Всё было по делу, и благодаря этому я смогла расслабиться.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">Простыми смыслами, тонким чувствованием мы смогли собрать недостающие паззлы и найти ключи к решению моей ситуации. Вовремя сказанные слова попадают в самое сердце и сажают семена, которые будут прорастать.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">Благодаря сессии я увидела карту, по которой мне идти, при этом бережно относясь к своему состоянию.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">Каждое твоё слово записала — именно то, что мне нужно было услышать, то, что вернуло меня к себе. Буду возвращаться.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
         </div>
-        <div style="break-inside:avoid;background:#fff;border-radius:14px;padding:28px;margin-bottom:20px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
+        <div class="review-card" style="background:#fff;border-radius:14px;padding:28px;box-shadow:0 2px 24px -12px rgba(200,112,90,0.22)">
           <span style="display:block;font-family:'Prata',Georgia,serif;font-size:2.4rem;line-height:0.8;color:#C8705A">«</span>
           <p style="font-size:1rem;line-height:1.7;color:#1C1C2E;margin-top:14px;text-wrap:pretty"><span style="color: rgb(42, 45, 51); font-size: 15.68px; background-color: rgb(244, 243, 239);">Точно мои ощущения описали. Чувствую, что есть огонь внутри, но как и куда направить — затык. Однако мне всё чаще стали попадаться очень нужные в моменте люди.</span></p>
           <p style="font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;color:#6B6560;margin-top:18px">— Клиентка</p>
