@@ -67,6 +67,23 @@ def test_channel_link_returned():
     assert 'href="https://t.me/alania_sky"' in html()
 
 
+def test_no_pasted_background_artifacts():
+    """Инлайновые background-color — следы вставки текста из редактора:
+    цвета СТАРОЙ палитры (#F4F3EF фарфоровый, #EAE8E2 жемчужный), которых
+    на этой странице больше нет. Рисуются серыми подложками под текстом.
+    Настоящие фоны в дизайне записаны как background:#… — их не трогаем."""
+    assert "background-color: rgb(" not in html()
+
+
+def test_list_markers_are_consistent():
+    """53 из 60 пунктов несут маркер-тире в терракоте, а регалии в герое —
+    сырую звёздочку, оставшуюся от markdown при вставке."""
+    lis = re.findall(r"<li[^>]*>(.*?)</li>", html(), re.S)
+    starred = [re.sub(r"<[^>]+>", "", x).strip()[:40]
+               for x in lis if re.sub(r"<[^>]+>", "", x).strip().startswith("*")]
+    assert not starred, f"пункты со звёздочкой: {starred}"
+
+
 def test_head_carries_seo_and_preview():
     """Ссылку на сайт шлют в Telegram — без og-блока она не развернётся
     в превью, а og.jpg собирается и весит, но никем не используется."""
