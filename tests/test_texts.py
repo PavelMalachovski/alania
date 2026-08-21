@@ -41,7 +41,7 @@ def test_pay_screens_carry_legal_notice():
 def test_crypto_screen_has_address_amount_and_network():
     _, crypto = _screens()
     assert f"<code>{CRYPTO_ADDRESS}</code>" in crypto
-    assert "116 USDT" in crypto and "TRC20" in crypto
+    assert "58 USDT" in crypto and "TRC20" in crypto
 
 
 def test_quiz_result_has_booking_button():
