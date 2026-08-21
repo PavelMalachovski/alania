@@ -3,7 +3,7 @@ from formatting import PRICE_TEXT, format_slot_human
 
 
 def test_price_text():
-    assert PRICE_TEXT == "100 € / 10000 ₽"
+    assert PRICE_TEXT == "50 € / 5000 ₽"
 
 
 def test_format_slot_summer_cest():
