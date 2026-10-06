@@ -6,10 +6,11 @@ from booking_config import BookingConfig
 from google_calendar import GoogleCalendar
 from handlers.booking import open_calendar, open_my_bookings
 from handlers.consultation import PERSONAL_WORK_TEXT
-from handlers.info import CHANNEL_TEXT, GAME_TEXT
+from handlers.info import CHANNEL_TEXT, COURSE_TEXT, GAME_TEXT
 from keyboards.inline import (
     ask_lana_kb,
     channel_kb,
+    course_kb,
     game_kb,
     personal_work_kb,
     quiz_intro_kb,
@@ -18,6 +19,7 @@ from keyboards.reply import (
     BTN_ASK,
     BTN_BOOK,
     BTN_CHANNEL,
+    BTN_COURSE,
     BTN_GAME,
     BTN_MY,
     BTN_PERSONAL,
@@ -33,7 +35,7 @@ ASK_TEXT = "Напиши Лане в личные сообщения — она 
 
 # Разделы: тап по нижней кнопке удаляется, предыдущий экран убирается, новый
 # показывается сообщением (show_screen — единое окно на чат). Нижняя клавиатура
-# держится на уровне чата и переживает удаление сообщения, поэтому 7 кнопок
+# держится на уровне чата и переживает удаление сообщения, поэтому 8 кнопок
 # остаются видны во всех разделах.
 @router.message(StateFilter(None), F.text == BTN_PERSONAL)
 async def reply_personal(message: Message, bot: Bot) -> None:
@@ -45,6 +47,12 @@ async def reply_personal(message: Message, bot: Bot) -> None:
 async def reply_game(message: Message, bot: Bot) -> None:
     await delete_safe(bot, message.chat.id, message.message_id)
     await show_screen(bot, message.chat.id, GAME_TEXT, game_kb())
+
+
+@router.message(StateFilter(None), F.text == BTN_COURSE)
+async def reply_course(message: Message, bot: Bot) -> None:
+    await delete_safe(bot, message.chat.id, message.message_id)
+    await show_screen(bot, message.chat.id, COURSE_TEXT, course_kb())
 
 
 @router.message(StateFilter(None), F.text == BTN_CHANNEL)

@@ -11,6 +11,10 @@ DM_URL = "https://t.me/LanaLeonovich"
 PAY_RUB_URL = "https://web.tribute.tg/p/rTr"
 PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
+# Курс-практикум «Взломай Реальность»: отдельные продукты Tribute, доступ
+# к курсу Tribute выдаёт сам после оплаты.
+COURSE_PAY_RUB_URL = "https://web.tribute.tg/p/Ezz"
+COURSE_PAY_EUR_URL = "https://web.tribute.tg/p/Ezx"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
 
 # Юр. документы — Google Docs Ланы, открыты по ссылке без входа в аккаунт.
@@ -184,6 +188,18 @@ def game_kb():
     builder = InlineKeyboardBuilder()
     builder.button(text="Перейти к игре", url=GAME_URL)
     builder.button(text="⇦ Назад", callback_data="start_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def course_kb():
+    """Экран курса: оплата только через Tribute (рубли/евро), без крипты и
+    без «Я оплатил(а)» — доступ Tribute выдаёт сам, подтверждать нечего."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text="Оплатить в рублях", url=COURSE_PAY_RUB_URL)
+    builder.button(text="Оплатить в евро", url=COURSE_PAY_EUR_URL)
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 

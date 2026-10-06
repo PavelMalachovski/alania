@@ -206,13 +206,13 @@ def test_portrait_attributes_match_file():
     assert (int(m.group(1)), int(m.group(2))) == actual
 
 
-def test_course_card_links_to_tribute():
-    """Курс-практикум оплачивается прямо с сайта: евро и рубли — разные
-    продукты в Tribute, перепутать ссылки — взять не ту валюту."""
+def test_course_card_leads_to_bot():
+    """Оплата курса — в боте (экран «Курс-практикум», кнопки Tribute там),
+    на сайте только кнопка в бота с deep link на этот экран."""
     page = html()
     assert "Курс-практикум «ВЗЛОМАЙ РЕАЛЬНОСТЬ»" in page
-    assert re.search(r'href="https://web\.tribute\.tg/p/Ezx"[^>]*>Оплатить в евро<', page)
-    assert re.search(r'href="https://web\.tribute\.tg/p/Ezz"[^>]*>Оплатить в рублях<', page)
+    assert "tribute.tg" not in page, "оплата курса переехала в бота"
+    assert re.search(r'href="https://t\.me/alania_sky_bot\?start=course"[^>]*>Перейти в Telegram-бот<', page)
     # курс стоит после VECHNOST внутри #services
     assert page.index("Игра для пар «VECHNOST»") < page.index("ВЗЛОМАЙ РЕАЛЬНОСТЬ") \
         < page.index("Как записаться на сессию")
