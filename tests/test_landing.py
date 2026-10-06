@@ -182,3 +182,37 @@ def test_image_weight_budget(name, limit_kb):
     assert path.is_file(), f"{name} не собран"
     kb = path.stat().st_size / 1024
     assert kb < limit_kb, f"{name} весит {kb:.0f} КБ, бюджет {limit_kb} КБ"
+
+
+def _jpeg_size(data: bytes) -> tuple[int, int]:
+    """(ширина, высота) из SOF-маркера — без Pillow в зависимостях."""
+    i = 2
+    while i < len(data):
+        marker = data[i + 1]
+        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+            return (int.from_bytes(data[i + 7:i + 9], "big"),
+                    int.from_bytes(data[i + 5:i + 7], "big"))
+        i += 2 + int.from_bytes(data[i + 2:i + 4], "big")
+    raise ValueError("SOF не найден")
+
+
+def test_portrait_attributes_match_file():
+    """width/height у <img> портрета — реальный размер кадра. Фото меняют
+    целиком, и старые атрибуты легко забыть: браузер резервирует место
+    по ним, и при другой пропорции картинка прыгает при загрузке."""
+    m = re.search(r'<img src="assets/lana\.jpg"[^>]*width="(\d+)" height="(\d+)"', html())
+    assert m, "не нашёл <img> портрета"
+    actual = _jpeg_size((WEB / "assets" / "lana.jpg").read_bytes())
+    assert (int(m.group(1)), int(m.group(2))) == actual
+
+
+def test_course_card_links_to_tribute():
+    """Курс-практикум оплачивается прямо с сайта: евро и рубли — разные
+    продукты в Tribute, перепутать ссылки — взять не ту валюту."""
+    page = html()
+    assert "Курс-практикум «ВЗЛОМАЙ РЕАЛЬНОСТЬ»" in page
+    assert re.search(r'href="https://web\.tribute\.tg/p/Ezx"[^>]*>Оплатить в евро<', page)
+    assert re.search(r'href="https://web\.tribute\.tg/p/Ezz"[^>]*>Оплатить в рублях<', page)
+    # курс стоит после VECHNOST внутри #services
+    assert page.index("Игра для пар «VECHNOST»") < page.index("ВЗЛОМАЙ РЕАЛЬНОСТЬ") \
+        < page.index("Как записаться на сессию")
