@@ -4,6 +4,7 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 # заголовками экранов, без цветных эмодзи (см. конвенцию в CLAUDE.md).
 BTN_PERSONAL = "О личной работе"
 BTN_GAME = "Игра VECHNOST"
+BTN_COURSE = "Курс-практикум «Взломай Реальность»"
 BTN_CHANNEL = "Бесплатный Telegram-канал"
 BTN_QUIZ = "Тест «Кто управляет твоей жизнью?»"
 BTN_MY = "Мои записи"
@@ -15,6 +16,8 @@ def main_reply_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=BTN_PERSONAL), KeyboardButton(text=BTN_GAME)],
+            # длинная подпись — на всю ширину, иначе в два столбца её обрежет
+            [KeyboardButton(text=BTN_COURSE)],
             [KeyboardButton(text=BTN_CHANNEL), KeyboardButton(text=BTN_QUIZ)],
             [KeyboardButton(text=BTN_MY), KeyboardButton(text=BTN_ASK)],
             [KeyboardButton(text=BTN_BOOK)],

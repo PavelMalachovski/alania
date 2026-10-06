@@ -1,9 +1,11 @@
 from aiogram import Bot, F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from database import User, get_session
+from handlers.info import COURSE_TEXT
+from keyboards.inline import course_kb
 from keyboards.reply import main_reply_kb
 from ui import reset_keyboard, show_screen
 
@@ -19,7 +21,8 @@ MAIN_MENU_TEXT = (
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
+async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
+                    bot: Bot) -> None:
     await state.clear()
     async with get_session() as session:
         user = await session.get(User, message.from_user.id)
@@ -38,6 +41,12 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
     # Нижняя клавиатура — на отдельном якоре (переживает удаление контентных
     # окон), приветствие — обычное контентное окно (без нижней клавиатуры).
     await reset_keyboard(bot, message.chat.id, main_reply_kb())
+    # Deep link с лендинга (t.me/<бот>?start=course) открывает экран курса
+    # сразу, без приветствия. Остальные payload (в т.ч. ?start=site) — как
+    # обычный /start.
+    if command.args == "course":
+        await show_screen(bot, message.chat.id, COURSE_TEXT, course_kb())
+        return
     await show_screen(bot, message.chat.id, MAIN_MENU_TEXT)
 
 
