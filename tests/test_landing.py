@@ -1,5 +1,6 @@
 """Структурные проверки лендинга: страница статическая, без рантайма,
 все локальные ссылки существуют, юр-ссылки проставлены."""
+import json
 import re
 from pathlib import Path
 
@@ -29,7 +30,11 @@ def test_no_framework_only_tiny_inline_script():
     скрипт не разросся и чтобы фреймворк не вернулся."""
     page = html()
     assert "<script src" not in page, "внешних скриптов быть не должно"
-    assert page.count("<script") == 1, "ровно один инлайновый скрипт"
+    # application/ld+json — разметка для поиска, браузер её не исполняет;
+    # считаем только настоящие скрипты.
+    attrs = re.findall(r"<script\b([^>]*)>", page)
+    executable = [a for a in attrs if 'type="application/ld+json"' not in a]
+    assert len(executable) == 1, "ровно один инлайновый скрипт"
     assert "react" not in page.lower()
     body = re.search(r"<script>(.*?)</script>", page, re.S).group(1)
     assert len(body) < 1400, f"скрипт разросся до {len(body)} символов"
@@ -143,6 +148,31 @@ def test_head_carries_seo_and_preview():
                    'property="og:title"', 'property="og:image"',
                    'name="twitter:card"', "assets/og.jpg"):
         assert needle in page, f"в head нет {needle}"
+
+
+def test_search_finds_latin_name():
+    """По запросу «lanaleonovich» Google сайт не находил: имя было только
+    кириллицей, а о самом сайте поисковику ничего не сообщали. Латиница —
+    в title, в видимом подвале и в JSON-LD; robots.txt указывает на
+    sitemap.xml. Все адреса — абсолютные и совпадают с canonical."""
+    page = html()
+    canonical = re.search(r'<link rel="canonical" href="([^"]+)"', page).group(1)
+    title = re.search(r"<title>(.*?)</title>", page).group(1)
+    assert "Lana Leonovich" in title
+    assert "© 2026 Лана Леонович (Lana Leonovich)" in page, "латиница в видимом тексте"
+
+    blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)
+    assert len(blocks) == 1
+    graph = {n["@type"]: n for n in json.loads(blocks[0])["@graph"]}
+    person = graph["Person"]
+    assert {"Lana Leonovich", "lanaleonovich"} <= set(person["alternateName"])
+    assert person["url"] == graph["WebSite"]["url"] == canonical
+    assert "https://www.instagram.com/alania.sky" in person["sameAs"]
+
+    robots = (WEB / "robots.txt").read_text(encoding="utf-8")
+    assert f"Sitemap: {canonical}sitemap.xml" in robots
+    assert "Disallow: /\n" not in robots
+    assert f"<loc>{canonical}</loc>" in (WEB / "sitemap.xml").read_text(encoding="utf-8")
 
 
 def test_exactly_one_h1_and_it_has_text():
