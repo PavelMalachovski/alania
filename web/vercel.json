@@ -17,5 +17,13 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "alania.vercel.app" }],
+      "destination": "https://lanaleonovich.com/:path*",
+      "permanent": true
+    }
   ]
 }
