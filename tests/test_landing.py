@@ -175,6 +175,22 @@ def test_search_finds_latin_name():
     assert f"<loc>{canonical}</loc>" in (WEB / "sitemap.xml").read_text(encoding="utf-8")
 
 
+def test_own_domain_is_the_only_address():
+    """Сайт живёт на lanaleonovich.com. Старый alania.vercel.app — только
+    постоянный редирект на него: два адреса с одной страницей Google
+    считает дублями и сам выбирает, какой показывать."""
+    page = html()
+    canonical = re.search(r'<link rel="canonical" href="([^"]+)"', page).group(1)
+    assert canonical == "https://lanaleonovich.com/"
+    for name in ("index.html", "robots.txt", "sitemap.xml"):
+        assert "alania.vercel.app" not in (WEB / name).read_text(encoding="utf-8"), name
+    redirects = json.loads((WEB / "vercel.json").read_text(encoding="utf-8"))["redirects"]
+    old = [r for r in redirects if {"type": "host", "value": "alania.vercel.app"} in r["has"]]
+    assert len(old) == 1 and old[0]["permanent"] is True
+    assert old[0]["source"] == "/:path*"
+    assert old[0]["destination"] == canonical + ":path*"
+
+
 def test_exactly_one_h1_and_it_has_text():
     """В бандле два ПУСТЫХ h1, а имя лежало в h2 — страница уехала бы
     в прод без единого заголовка первого уровня."""

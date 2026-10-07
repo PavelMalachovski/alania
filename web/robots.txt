@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://alania.vercel.app/sitemap.xml
+Sitemap: https://lanaleonovich.com/sitemap.xml
