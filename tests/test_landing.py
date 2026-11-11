@@ -253,12 +253,23 @@ def test_portrait_attributes_match_file():
 
 
 def test_course_card_leads_to_bot():
-    """Оплата курса — в боте (экран «Курс-практикум», кнопки Tribute там),
+    """Оплата курса — в боте (экран «Курс-практикум», счёт lava.top там),
     на сайте только кнопка в бота с deep link на этот экран."""
     page = html()
     assert "Курс-практикум «ВЗЛОМАЙ РЕАЛЬНОСТЬ»" in page
-    assert "tribute.tg" not in page, "оплата курса переехала в бота"
+    assert not re.search(r'href="[^"]*(tribute\.tg|lava\.top)', page), "оплата — в боте"
     assert re.search(r'href="https://t\.me/alania_sky_bot\?start=course"[^>]*>Перейти в Telegram-бот<', page)
     # курс стоит после VECHNOST внутри #services
     assert page.index("Игра для пар «VECHNOST»") < page.index("ВЗЛОМАЙ РЕАЛЬНОСТЬ") \
         < page.index("Как записаться на сессию")
+
+
+def test_prices_match_bot():
+    """Цены на сайте и в боте — одна витрина офферов lava.top. Курс уже
+    однажды разъехался (на сайте 11 €, в lava.top 28 €) — сверяем без
+    пробелов: на сайте тысячи разбиты («5 000 ₽»), в боте нет."""
+    from formatting import PRICE_TEXT
+    from handlers.info import COURSE_PRICE_TEXT
+    page = re.sub(r"\s", "", html())
+    for price in (PRICE_TEXT, COURSE_PRICE_TEXT):
+        assert re.sub(r"\s", "", price) in page, price

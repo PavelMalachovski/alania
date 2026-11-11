@@ -22,7 +22,12 @@ from database import Booking, User, get_session
 from filters import IsAdmin
 from formatting import format_slot_human
 from google_calendar import GoogleCalendar
-from handlers.booking import apply_reschedule, build_event_fields, _occupied_slots
+from handlers.booking import (
+    BOOKING_CONFIRMED_TEXT,
+    _occupied_slots,
+    apply_reschedule,
+    finalize_booking,
+)
 from handlers.start import MAIN_MENU_TEXT
 from keyboards.inline import broadcast_confirm_kb, lead_done_kb
 from keyboards.reply import main_reply_kb
@@ -76,34 +81,17 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot, gcal: GoogleCalendar
                 f"Эта запись уже обработана ({booking.status})", show_alert=True
             )
             return
-        slot = booking.slot_start
-        if slot.tzinfo is None:
-            slot = slot.replace(tzinfo=timezone.utc)
-        title, desc = await build_event_fields(session, booking.telegram_id)
 
-    event_id = None
-    sync_failed = False
-    try:
-        event_id = await gcal.create_event(slot, title, desc)
-    except Exception:
-        logger.exception("Не удалось создать событие для booking %s", booking_id)
-        sync_failed = True
-
-    async with get_session() as session:
-        booking = await session.get(Booking, booking_id)
-        booking.status = "confirmed"
-        booking.google_event_id = event_id
-        booking.calendar_sync_failed = sync_failed
-        await session.commit()
-        user_id = booking.telegram_id
+    done = await finalize_booking(gcal, booking_id, ("pay_claimed",))
+    if done is None:  # параллельный клик успел раньше
+        await callback.answer("Уже подтверждено")
+        return
+    slot, user_id, sync_failed = done
 
     try:
         await bot.send_message(
             user_id,
-            "<b>✦ Вы оплатили, спасибо!</b> 🤍\n\n"
-            f"Запись подтверждена: <b>{format_slot_human(slot)}</b>.\n\n"
-            "Лана свяжется с тобой перед сессией и пришлёт ссылку на видеозвонок. "
-            "До встречи ✦",
+            BOOKING_CONFIRMED_TEXT.format(slot=format_slot_human(slot)),
             reply_markup=lead_done_kb(),
         )
     except TelegramAPIError:

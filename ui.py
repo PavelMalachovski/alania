@@ -93,11 +93,14 @@ async def track_screen(chat_id: int, message) -> None:
 
 
 async def edit_screen(bot, chat_id: int, message_id: int, text: str,
-                      reply_markup=None) -> None:
-    """Отредактировать «экран», глотая «not modified»/«to edit not found» и пр."""
+                      reply_markup=None, link_preview_options=None) -> None:
+    """Отредактировать «экран», глотая «not modified»/«to edit not found» и пр.
+    link_preview_options — для экранов со ссылками на документы (карточку
+    превью гасим, она ломает вёрстку)."""
+    extra = {"link_preview_options": link_preview_options} if link_preview_options else {}
     try:
         await bot.edit_message_text(
-            text, chat_id=chat_id, message_id=message_id, reply_markup=reply_markup
+            text, chat_id=chat_id, message_id=message_id, reply_markup=reply_markup, **extra
         )
     except TelegramAPIError:
         logger.debug("edit_screen: не отредактировал %s/%s", chat_id, message_id)

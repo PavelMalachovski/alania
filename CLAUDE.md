@@ -25,14 +25,44 @@ python main.py
 ## Архитектура
 
 - `main.py` — точка входа. Парсит `ADMIN_IDS`, вешает middleware, регистрирует
-  глобальный `dp.errors()`, запускает фоновую задачу дожима (`followup_loop`),
+  глобальный `dp.errors()`, запускает фоновые задачи дожима (`followup_loop`)
+  и проверки оплат (`payments_loop`, только если задан `LAVA_API_KEY`),
   прокидывает `admin_ids` в polling (доступны в хендлерах и фильтрах как
-  workflow data — аргумент `admin_ids: list[int]`).
-- `database.py` — модели (`User`, `Lead`, `Booking`, `Setting`, `Event`) и
+  workflow data — аргумент `admin_ids: list[int]`), так же `lava:
+  LavaClient | None` (в хендлерах — с дефолтом `= None`: без ключа кнопки
+  оплаты отвечают «оплата недоступна», а не падают).
+- `lava.py` — `LavaClient` для `https://gate.lava.top` (ключ в заголовке
+  `X-Api-Key`): `create_invoice(email, offer_id, currency)` →
+  `POST /api/v2/invoice`, `invoice_status(id)` → `GET /api/v1/invoices/{id}`.
+  `LavaError.email_invalid` — 400 с `details.email` (lava.top сам валидирует
+  email): клиента просят ввести адрес заново. `OFFERS` — id офферов сессии,
+  курса и игры из кабинета (`GET /api/v2/products?feedVisibility=ALL`: курс
+  и игра там скрыты из витрины, без `ALL` их не видно). Цена — в оффере,
+  бот шлёт только id и валюту (`RUB`/`EUR`).
+- `payments.py` — автоподтверждение. Вебхуков нет (бот на polling без
+  публичного адреса): `payments_pass` опрашивает неоплаченные счета —
+  первый час на каждом проходе (`POLL_INTERVAL = 20` с), потом не чаще
+  `SLOW_EVERY` (10 мин), после `GIVE_UP_AFTER` (48 ч) — `expired`.
+  `check_payment` — одна проверка (её же зовёт кнопка «✓ Я оплатил(а)»;
+  `expired` она тоже проверяет). Переход счёта в `completed`/`failed` —
+  атомарный `UPDATE … WHERE status IN pending`: проход и кнопка не
+  обработают одну оплату дважды. Оплата сессии → `_settle_booking`: холд жив
+  — `finalize_booking`; холд истёк — подтверждение, только если слот всё ещё
+  в `free_slots()`, иначе `paid_conflict` и Лане «свяжись: другое время или
+  возврат» (Google недоступен — тоже конфликт). Запись уже обработана
+  (двойная оплата) — Лане «лишняя оплата». Курс/игра — клиенту «доступ
+  придёт на email», Лане «покупка». Экран счёта после оплаты удаляется
+  (`Payment.message_id`), чтобы не заплатить второй раз.
+- `database.py` — модели (`User` (+ `email` для счетов lava.top,
+  `health_consent_at`), `Lead`,
+  `Booking`, `Payment` (счёт lava.top: продукт, `booking_id` для сессии,
+  `invoice_id`, статус, `waiver_at`, `checked_at` для расписания опроса), `Setting`,
+  `Event`) и
   подключение. Схема создаётся через `create_all` при старте (создаёт только
   отсутствующие таблицы, колонки в существующих не меняет). Поверх этого
   `init_db` на Postgres идемпотентно доводит схему списком `_MIGRATIONS`
-  (`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS ...` для полей переноса) —
+  (`ALTER TABLE … ADD COLUMN IF NOT EXISTS ...` для полей переноса и
+  `users.email`; новая таблица `payments` создаётся самим `create_all`) —
   для добавления новых колонок ручной `DROP TABLE` не нужен, только когда
   меняется тип/состав колонок несовместимо. На sqlite (тесты) миграции не
   нужны — `create_all` сразу создаёт таблицу по актуальным моделям.
@@ -63,7 +93,8 @@ python main.py
   свободные слоты по расписанию `BookingConfig` минус занятость Google
   минус активные холды в БД. Без побочных эффектов, легко тестируется.
 - `formatting.py` — `format_slot_human()` (слот в Праге + Мск, день недели),
-  `PRICE_TEXT` (цена консультации).
+  `PRICE_TEXT` (цена консультации — витрина, сумму счёта задаёт оффер
+  lava.top).
 - `ui.py` — хелперы гигиены сообщений, на них держится вся уборка переписки
   в handlers/: `delete_safe(bot, chat_id, message_id)` — удалить сообщение,
   глотая `TelegramAPIError` (старше 48ч, уже удалено, нет прав);
@@ -118,7 +149,9 @@ python main.py
     вместо того чтобы оставлять развёрнутое уведомление висеть в чате.
     Роутер целиком под `IsAdmin`.
   - `booking.py` — выбор дня/времени из реальных Google-слотов, холд слота в
-    `bookings` на `BOOKING_HOLD_MINUTES`, экран оплаты, «Я оплатил(а)»,
+    `bookings` на `BOOKING_HOLD_MINUTES`, экран оплаты (`pay_screen_text`,
+    валюта → `handlers/payments.py`), `finalize_booking` (общий для
+    автоподтверждения и ручного `cb_confirm_pay`), легаси «Я оплатил(а)»,
     лимит активных записей (`MAX_ACTIVE_BOOKINGS`), «Мои записи»
     (`my_bookings`) и перенос (`resched:<id>` → выбор нового слота →
     сразу или через согласие Ланы, `RESCHEDULE_THRESHOLD`). Экраны записи
@@ -131,6 +164,27 @@ python main.py
     `RescheduleForm.reason` при ответе клиента удаляет его текст
     (`delete_safe`) и редактирует тот же якорь (`edit_screen`) — один экран
     вместо цепочки сообщений «спроси → ответь → спасибо».
+  - `payments.py` — оплата через lava.top для сессии, курса и игры:
+    `lava_pay:<product>:<RUB|EUR>:<booking_id>` (product `session`/`course`/
+    `game`, booking_id > 0 только у сессии — whitelist + проверка, что бронь
+    своя и холд жив) → подтверждения (оферта п. 7.2.1, ст. 9 GDPR), каждое
+    отдельной кнопкой `lava_ok:<health|waiver>:…`: согласие на сведения о
+    состоянии — один раз для сессии и курса (`User.health_consent_at`),
+    просьба начать до истечения 14 дней — под каждый заказ (FSM-данные
+    `waivers`, ключ `<product>:<booking_id>`, живёт `CONSENT_TTL` = 1 ч,
+    при счёте копируется в `Payment.waiver_at`; поэтому FSM в этом модуле
+    сбрасывается `set_state(None)`, а не `clear()`). Без подтверждений счёт
+    не выставляется — проверка ещё и в `_issue_invoice`. После оплаты
+    клиенту — подтверждение договора со временем согласия
+    (`payments.contract_note`). Дальше → email из `User.email` или FSM `PayForm.email`
+    (паттерн «якорь», как причина переноса: id экрана в FSM, ответ клиента
+    удаляется, экран правится на месте; пока ждём email, текст кнопок нижней
+    клавиатуры — тоже «ввод», как и в переносе: отказ «не похоже на email» и
+    «⇦ Отмена») → `create_invoice` → `Payment` + экран счёта
+    (`lava_invoice_kb`: «Оплатить N ₽» ссылкой, «✓ Я оплатил(а)» →
+    `lava_check:<payment_id>`, «Изменить email» → `lava_email:…`, «⇦ Назад»
+    → `lava_back:<product>:<booking_id>`). Выставленный счёт заново
+    отсчитывает холд — оплата на стороне lava.top занимает минуты.
   - `fallback.py` — ловит колбэки старого квиза (`quiz_ans:*`, `quiz_back`),
     оставшиеся в сообщениях после рестарта бота и сброса FSM меню.
   - `lead.py` — FSM-заявка (имя → запрос → контакт), уведомление админам.
@@ -164,18 +218,19 @@ python main.py
   - `consultation.py`, `info.py` — контентные экраны (тексты + клавиатуры).
     В `info.py` же `COURSE_TEXT` — курс-практикум «Взломай Реальность» (тот
     же текст, что в карточке курса на лендинге; правишь один — правь и
-    другой). Оплата курса — только Tribute (`course_kb()`: рубли/евро +
-    «Написать в ЛС»), без крипты и без «✓ Я оплатил(а)»: доступ к курсу
-    Tribute выдаёт сам, в БД покупки курса не пишутся и Лане подтверждать
-    нечего. На сайте кнопок оплаты курса нет — только ссылка в бота.
+    другой), и `GAME_TEXT`. Цены `COURSE_PRICE_TEXT`/`GAME_PRICE_TEXT` —
+    витрина офферов lava.top. Курс и игра оплачиваются счётом lava.top
+    (`course_kb()`/`game_kb()`: «Оплатить в рублях / в евро»); доступ
+    lava.top присылает на email сам, бот только сообщает Лане о покупке.
+    На сайте кнопок оплаты нет — только ссылки в бота.
 - `keyboards/inline.py` — все inline-клавиатуры и внешние URL (одним блоком
-  сверху), включая `LEGAL_*_URL` — четыре Google Docs Ланы в форме
+  сверху), включая `LEGAL_*_URL` — три Google Docs Ланы в форме
   `/preview` (read-only читалка вместо редактора `/edit`; id собираются
   через `_GDOC.format(...)`). Источник у этих текстов один: копий в
-  репозитории нет, футер лендинга ссылается на те же четыре документа.
+  репозитории нет, футер лендинга ссылается на те же три документа.
   Лана правит документ — правка сразу видна и в боте, и на сайте.
-  Ссылки оплаты курса — отдельные продукты Tribute (`COURSE_PAY_RUB_URL`,
-  `COURSE_PAY_EUR_URL`), не путать с `PAY_RUB_URL`/`PAY_EUR_URL` сессии.
+  Ссылок на оплату здесь нет: у каждого счёта lava.top ссылка своя и
+  приходит из API.
   `main_menu_kb()` удалён — разделы переехали в нижнюю клавиатуру.
 - `keyboards/reply.py` — `main_reply_kb()`: постоянная `ReplyKeyboardMarkup`
   (`resize_keyboard=True`, `is_persistent=True`) на 8 кнопок (без цветных
@@ -197,32 +252,30 @@ python main.py
 `MAX_ACTIVE_BOOKINGS = 5` активных записей клиента (`_active_booking_count`:
 `held` неистёкшие + `pay_claimed`/`confirmed` в будущем) → слот **держится**
 за клиентом: `Booking(status="held", held_until=now+BOOKING_HOLD_MINUTES)`
-(никакого события в календаре ещё нет) → экран оплаты (Tribute-ссылки ₽/€,
-`PRICE_TEXT`, юр-блок `LEGAL_NOTICE` со ссылками на оферту/политику/согласие
-и, отдельной кнопкой, «Оплатить в криптовалюте» → `pay_crypto:<id>`: экран с
-суммой `CRYPTO_AMOUNT_TEXT`, адресом `CRYPTO_ADDRESS` в `<code>` и нативной
-кнопкой копирования `copy_text` (Bot API 8.0, отсюда `aiogram>=3.15`);
-назад — `pay_back:<id>`. Оба экрана шлются с `link_preview_options`
-`is_disabled=True`, иначе карточка сайта ломает вёрстку) → «✓ Я оплатил(а)»
-(`paid:<id>` с обычного экрана, `paid_crypto:<id>` с крипто-экрана — общий
-`_claim_payment`, способ влияет только на текст уведомления Лане: где искать
-деньги, в Tribute или на кошельке; в БД способ не хранится) проверяет, что
-бронь всё ещё `held`
-(защита от гонки двойного клика), переводит статус в `pay_claimed` (клиенту
-«Принято, проверяем», админам — кнопки «✅ Подтвердить» / «❌ Отклонить»);
-событие в `CALENDAR_ID_BOOKINGS` **ещё не создаётся** — до подтверждения
-слот занят только записью в БД. Занятость для `free_slots()` на этом
-участке считает `_occupied_slots()`: `held` неистёкшие **и** `pay_claimed`
-(и то, и другое — ещё без события в календаре).
+(никакого события в календаре ещё нет) → экран оплаты (`pay_screen_text`:
+`PRICE_TEXT`, юр-блок `LEGAL_NOTICE` со ссылками на оферту/политику/согласие,
+шлётся с `link_preview_options` `is_disabled=True`, иначе карточка документа
+ломает вёрстку; кнопки «Оплатить в рублях / в евро») → `handlers/payments.py`:
+email (один раз, дальше из `User.email`) → счёт lava.top, холд отсчитывается
+заново → клиент платит на стороне lava.top → `payments.py` видит
+`completed` (фоновый опрос или кнопка «✓ Я оплатил(а)») → `finalize_booking`:
+атомарно `held → confirmed` (с `calendar_sync_failed=True`, пока события
+нет — так слот остаётся занятым для `_occupied_slots`), `gcal.create_event()`,
+клиенту «Вы оплатили, спасибо…» (`BOOKING_CONFIRMED_TEXT`), Лане —
+уведомление; `create_event()` упал — `calendar_sync_failed` остаётся `True`,
+Лане «оформи вручную», статус всё равно `confirmed`. Заплатили после
+истечения холда, а слот заняли — `paid_conflict` (см. `payments.py`).
 
-Лана подтверждает (`cb_confirm_pay`) — только на этом шаге вызывается
-`gcal.create_event()`, статус переходит в `confirmed`, клиенту «Вы
-оплатили, спасибо…»; если `create_event()` упал — `calendar_sync_failed=True`,
-админам предупреждение «оформи вручную», но статус всё равно `confirmed`.
-Или отклоняет (`cb_reject_pay`, status `cancelled`; событие удалять не
-нужно, т.к. оно ещё не создавалось на этом статусе — `delete_event()`
-вызывается только если `google_event_id` уже был проставлен), клиенту
-«оплату не нашли, слот освобождён».
+Легаси до lava.top: `pay_claimed` — клиент нажал «✓ Я оплатил(а)»
+(`paid:<id>` / `paid_crypto:<id>` — `_claim_payment`) на экране, открытом
+ещё с Tribute/USDT. Экраны с такими кнопками могут висеть в чатах, деньги
+могли уйти — путь сохранён: Лана подтверждает (`cb_confirm_pay` →
+`finalize_booking` из `pay_claimed`) или отклоняет (`cb_reject_pay`, status
+`cancelled`; событие удалять не нужно, т.к. оно ещё не создавалось на этом
+статусе — `delete_event()` вызывается только если `google_event_id` уже был
+проставлен), клиенту «оплату не нашли, слот освобождён». Кнопки
+крипто-экрана (`pay_crypto:`, `pay_back:`) отвечают алертом «криптовалютой
+больше недоступна». `pay_claimed` по-прежнему считается занятым и активным.
 
 **Мои записи / перенос.** «Мои записи» (`my_bookings`) — список будущих
 `pay_claimed`/`confirmed` записей клиента, у каждой кнопка «Перенести»
@@ -254,8 +307,7 @@ python main.py
 бронирование, оплата, перенос) → пользователю понятный текст + кнопка
 «Попробовать снова» / «Написать в ЛС», не мёртвая кнопка.
 
-Tribute не шлёт вебхуков — оплата подтверждается вручную админом, автоматики
-здесь нет и быть не может без смены платёжки. Гонка «два клиента бронируют
+Гонка «два клиента бронируют
 один и тот же слот одновременно» подавляется проверкой «слот всё ещё в
 `free_slots()`» перед вставкой, но не UNIQUE-констрейнтом на уровне БД —
 для объёма этого бота риск принят как есть. Та же проверка «слот ещё
@@ -317,6 +369,15 @@ Tribute не шлёт вебхуков — оплата подтверждает
   `StateFilter` не срабатывает и кнопка раньше молча ничего не делала. Чего
   по-прежнему нет: рассылка живёт в памяти процесса — рестарт Railway посреди
   цикла обрывает её без возможности продолжить.
+- **lava.top.** Ключ — `LAVA_API_KEY` в переменных Railway (без него бот
+  работает, но оплата недоступна). Цена — в двух местах: оффер в кабинете
+  lava.top (сколько реально спишут) и тексты (`PRICE_TEXT`,
+  `COURSE_PRICE_TEXT`, `GAME_PRICE_TEXT` + сайт). Поменяли цену в lava.top —
+  поменяй тексты; `test_prices_match_bot` сверяет сайт с ботом, но до
+  lava.top тесты не дотягиваются. Новый продукт в кабинете — новый id
+  оффера в `lava.OFFERS`. Email клиентов теперь хранится в `users.email` —
+  это персональные данные, политика конфиденциальности должна это
+  упоминать.
 - `zoneinfo("Europe/Prague")` требует пакет `tzdata` (есть в requirements) —
   без него упадёт на Windows и в slim-образах.
 - Каждый новый `callback_data` в клавиатуре должен иметь хендлер — иначе кнопка
@@ -327,7 +388,7 @@ Tribute не шлёт вебхуков — оплата подтверждает
 ## Проверка изменений
 
 ```bash
-python -m py_compile main.py database.py middlewares.py filters.py followup.py slots.py google_calendar.py booking_config.py formatting.py ui.py handlers/*.py keyboards/*.py
+python -m py_compile main.py database.py middlewares.py filters.py followup.py slots.py google_calendar.py booking_config.py formatting.py lava.py payments.py ui.py handlers/*.py keyboards/*.py
 ```
 
 Автотесты есть (`tests/`, pytest) — гоняют хендлеры через фейковую сессию
@@ -337,7 +398,9 @@ python -m py_compile main.py database.py middlewares.py filters.py followup.py s
 FSM-заявка, бронирование слотов из Google-занятости, холд/оплата/отклонение,
 дожим, напоминание за 24ч и рассылка. Важно: workflow data в тесте задаётся
 `dp["admin_ids"] = [...]`, `dp["booking_config"] = ...`, `dp["gcal"] = ...`
-(или фейковый `GoogleCalendar`), FSM-ключ — пара (chat, user), поэтому у
+(или фейковый `GoogleCalendar`), `dp["lava"] = FakeLava()` (счета в памяти,
+статус двигает тест: `lava.statuses[invoice_id] = "completed"`, затем
+`payments.payments_pass(...)`), FSM-ключ — пара (chat, user), поэтому у
 фейковых колбэков chat должен быть личкой пользователя. Прогон:
 `PYTHONIOENCODING=utf-8 python -m pytest -q`. На Windows-консоли обязательно
 с `PYTHONIOENCODING=utf-8`, иначе падает на кириллице в выводе.

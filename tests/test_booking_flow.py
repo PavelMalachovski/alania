@@ -11,6 +11,7 @@ from aiogram.types import CallbackQuery, Chat, Message, Update, User as TgUser
 import database
 from database import Booking, get_session, init_db, close_db
 import booking_config
+from lava import Invoice, LavaError
 
 CLIENT_ID, ADMIN_ID = 501, 902
 TZ = ZoneInfo("Europe/Prague")
@@ -36,6 +37,34 @@ class FakeGCal:
     async def delete_event(self, event_id):
         self.deleted.append(event_id)
         self.events.pop(event_id, None)
+
+
+class FakeLava:
+    """Подставной lava.top: счета в памяти, статусы двигает тест."""
+    PRICES = {"RUB": 5000.0, "EUR": 50.0}
+
+    def __init__(self):
+        self.statuses = {}        # invoice_id -> статус
+        self.created = []         # (email, offer_id, currency)
+        self.fail = None          # None | "down" | "email"
+        self._n = 0
+
+    async def create_invoice(self, email, offer_id, currency):
+        if self.fail == "down":
+            raise LavaError("lava down")
+        if self.fail == "email":
+            raise LavaError("bad email", email_invalid=True)
+        self._n += 1
+        iid = f"inv_{self._n}"
+        self.statuses[iid] = "new"
+        self.created.append((email, offer_id, currency))
+        return Invoice(id=iid, status="new", payment_url=f"https://pay.lava.top/{iid}",
+                       amount=self.PRICES[currency], currency=currency)
+
+    async def invoice_status(self, invoice_id):
+        if self.fail == "down":
+            raise LavaError("lava down")
+        return self.statuses[invoice_id]
 
 
 class FakeSession(BaseSession):
@@ -77,6 +106,7 @@ async def env(_dp):
     _dp["admin_ids"] = [ADMIN_ID]
     _dp["booking_config"] = cfg
     _dp["gcal"] = gcal
+    _dp["lava"] = FakeLava()
     # _dp — session-scoped, его MemoryStorage переживает между тестами. FSM-флоу
     # (перенос) может оставить состояние в picking/reason со stale data — чистим
     # хранилище для тестовых ключей ПЕРЕД каждым тестом, чтобы старт был с нуля.
@@ -154,10 +184,17 @@ async def test_pick_time_creates_hold(env):
 
 
 async def _book_one(dp, bot, session):
+    """Бронь в held. Возвращает легаси-колбэк «Я оплатил(а)» (paid:<id>):
+    на новых экранах его нет — оплату lava.top бот видит сам (test_lava_pay),
+    но экраны, открытые до переезда, ещё висят в чатах, и ручное
+    подтверждение Ланы для них остаётся."""
     await press(dp, bot, "booking_start")
     await press(dp, bot, find_cb(session, "book_day:"))
     await press(dp, bot, find_cb(session, "book_slot:"))
-    return find_cb(session, "paid:")
+    from sqlalchemy import select
+    async with get_session() as s:
+        b = (await s.execute(select(Booking).order_by(Booking.id.desc()))).scalars().first()
+    return f"paid:{b.id}"
 
 
 @pytest.mark.asyncio
