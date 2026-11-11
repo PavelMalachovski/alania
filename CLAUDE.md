@@ -252,7 +252,9 @@ python main.py
 `MAX_ACTIVE_BOOKINGS = 5` активных записей клиента (`_active_booking_count`:
 `held` неистёкшие + `pay_claimed`/`confirmed` в будущем) → слот **держится**
 за клиентом: `Booking(status="held", held_until=now+BOOKING_HOLD_MINUTES)`
-(никакого события в календаре ещё нет) → экран оплаты (`pay_screen_text`:
+(никакого события в календаре ещё нет; прежние неоплаченные брони этого
+клиента при этом отпускаются — `held_until=now`, иначе «передумал и выбрал
+другое время» пять раз подряд упиралось в лимит при пустых «Моих записях») → экран оплаты (`pay_screen_text`:
 `PRICE_TEXT`, юр-блок `LEGAL_NOTICE` со ссылками на оферту/политику/согласие,
 шлётся с `link_preview_options` `is_disabled=True`, иначе карточка документа
 ломает вёрстку; кнопки «Оплатить в рублях / в евро») → `handlers/payments.py`:
