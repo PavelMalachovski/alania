@@ -1,12 +1,9 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# Цена сессии — как в оффере lava.top (lava.py); счёт выставляет lava.top
+# по своей цене, здесь только витрина.
 PRICE_TEXT = "50 € / 5000 ₽"
-
-# Крипто-оплата: адрес и сумма фиксированные, живут здесь рядом с ценой —
-# используются и в тексте экрана, и в кнопке копирования адреса.
-CRYPTO_ADDRESS = "TWCyAwzPrnevmWPei4RdreuQCXbDD6JXhh"
-CRYPTO_AMOUNT_TEXT = "58 USDT · сеть TRC20"
 
 TZ_PRAGUE = ZoneInfo("Europe/Prague")
 TZ_MOSCOW = ZoneInfo("Europe/Moscow")

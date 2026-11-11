@@ -7,26 +7,19 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, LinkPreviewOptions, Message
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from booking_config import BookingConfig
 from database import Booking, get_session
-from formatting import (
-    CRYPTO_ADDRESS,
-    CRYPTO_AMOUNT_TEXT,
-    PRICE_TEXT,
-    format_slot_human,
-)
+from formatting import PRICE_TEXT, format_slot_human
 from google_calendar import GoogleCalendar
 from keyboards.inline import (
     LEGAL_CONSENT_URL,
-    LEGAL_CRYPTO_URL,
     LEGAL_OFFER_URL,
     LEGAL_PRIVACY_URL,
     admin_confirm_pay_kb,
     admin_resched_kb,
     booking_calendar_kb,
-    booking_crypto_kb,
     booking_error_kb,
     booking_pay_kb,
     booking_times_kb,
@@ -56,39 +49,27 @@ LEGAL_NOTICE = (
     "18 лет, вы ознакомились и полностью принимаете условия "
     f'<a href="{LEGAL_OFFER_URL}">Публичной оферты</a>, '
     f'<a href="{LEGAL_PRIVACY_URL}">Политики конфиденциальности</a> и '
-    f'<a href="{LEGAL_CONSENT_URL}">Информированного согласия</a>.\n'
-    "(При выборе оплаты криптовалютой также применяются условия "
-    f'<a href="{LEGAL_CRYPTO_URL}">Дисклеймера по крипто-платежам</a>).'
+    f'<a href="{LEGAL_CONSENT_URL}">Информированного согласия</a>.'
 )
 
 
-def _pay_screen_text(slot: datetime, hold_local: datetime) -> str:
+def pay_screen_text(slot: datetime, hold_local: datetime) -> str:
     return (
         f"<b>✦ Твой слот: {format_slot_human(slot)}</b>\n\n"
         f"● Стоимость: {PRICE_TEXT}\n\n"
-        f"Время держим до {hold_local:%H:%M} (Прага). "
-        "Оплати удобным способом и нажми\n"
-        "«✓ Я оплатил(а)» ⇩\n"
-        "Лана подтвердит запись, и тебе придёт сообщение.\n\n"
+        f"Время держим до {hold_local:%H:%M} (Прага). Выбери валюту ⇩ — "
+        "оплата через lava.top. Как только платёж пройдёт, запись "
+        "подтвердится сама и придёт сообщение.\n\n"
         f"{LEGAL_NOTICE}"
     )
 
 
-def _crypto_screen_text(slot: datetime, hold_local: datetime) -> str:
-    return (
-        "<b>✦ Оплата в криптовалюте</b>\n\n"
-        f"Слот: <b>{format_slot_human(slot)}</b>\n"
-        f"● Сумма: <b>{CRYPTO_AMOUNT_TEXT}</b>\n\n"
-        "Адрес кошелька:\n"
-        f"<code>{CRYPTO_ADDRESS}</code>\n\n"
-        "‼️ Переводи только USDT в сети TRC20 — в другой сети платёж не дойдёт. "
-        "Комиссию сети оплачивает отправитель.\n\n"
-        f"Время держим до {hold_local:%H:%M} (Прага). "
-        "После перевода нажми «✓ Я оплатил(а)» ⇩\n"
-        "Лана подтвердит запись, и тебе придёт сообщение.\n\n"
-        "К крипто-платежам применяются условия "
-        f'<a href="{LEGAL_CRYPTO_URL}">Дисклеймера по крипто-платежам</a>.'
-    )
+BOOKING_CONFIRMED_TEXT = (
+    "<b>✦ Вы оплатили, спасибо!</b> 🤍\n\n"
+    "Запись подтверждена: <b>{slot}</b>.\n\n"
+    "Лана свяжется с тобой перед сессией и пришлёт ссылку на видеозвонок. "
+    "До встречи ✦"
+)
 
 
 def _month_index(year: int, month: int) -> int:
@@ -152,8 +133,13 @@ async def _active_booking_count(session, tg_id: int, now: datetime) -> int:
     return len(rows)
 
 
-async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]:
-    now = datetime.now(timezone.utc)
+async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig, *,
+                     now: datetime | None = None,
+                     lead: timedelta | None = None) -> list[datetime]:
+    """Свободные слоты. lead — отступ от «сейчас» (по умолчанию из cfg);
+    payments.py проверяет уже выбранный слот и зовёт с lead=0: клиенту,
+    заплатившему поздно, за 2 часа до сессии слот не должен «пропасть»."""
+    now = now or datetime.now(timezone.utc)
     horizon_end = now + timedelta(days=cfg.horizon_days)
     busy = await gcal.busy(now, horizon_end)
     async with get_session() as session:
@@ -161,7 +147,8 @@ async def _load_free(gcal: GoogleCalendar, cfg: BookingConfig) -> list[datetime]
     return free_slots(
         now, busy, holds,
         work_times=cfg.work_times, work_weekdays=cfg.work_weekdays,
-        horizon_days=cfg.horizon_days, lead=cfg.lead, tz=cfg.tz,
+        horizon_days=cfg.horizon_days,
+        lead=cfg.lead if lead is None else lead, tz=cfg.tz,
     )
 
 
@@ -303,61 +290,22 @@ async def cb_book_slot(
 
     hold_local = (now + booking_config.hold).astimezone(booking_config.tz)
     await callback.message.edit_text(
-        _pay_screen_text(slot, hold_local),
+        pay_screen_text(slot, hold_local),
         reply_markup=booking_pay_kb(booking_id),
         link_preview_options=_NO_PREVIEW,
     )
 
 
-async def _held_booking(callback: CallbackQuery, cfg: BookingConfig):
-    """(booking_id, slot, «держим до» в локальной зоне) для своей неистёкшей
-    брони на экранах оплаты. None + алерт — если бронь чужая, потеряна или
-    холд уже отпущен."""
-    try:
-        booking_id = int(callback.data.split(":", 1)[1])
-    except ValueError:
-        await callback.answer("Не понял запись", show_alert=True)
-        return None
-    async with get_session() as session:
-        booking = await session.get(Booking, booking_id)
-        if not booking or booking.telegram_id != callback.from_user.id:
-            await callback.answer("Запись не найдена", show_alert=True)
-            return None
-        if booking.status != "held":
-            await callback.answer("Эта запись уже обработана 🤍", show_alert=True)
-            return None
-        slot = booking.slot_start
-        held_until = booking.held_until
-    if slot.tzinfo is None:
-        slot = slot.replace(tzinfo=timezone.utc)
-    if held_until.tzinfo is None:
-        held_until = held_until.replace(tzinfo=timezone.utc)
-    return booking_id, slot, held_until.astimezone(cfg.tz)
-
-
-@router.callback_query(F.data.startswith("pay_crypto:"))
-async def cb_pay_crypto(callback: CallbackQuery, booking_config: BookingConfig) -> None:
-    held = await _held_booking(callback, booking_config)
-    if held is None:
-        return
-    booking_id, slot, hold_local = held
-    await callback.message.edit_text(
-        _crypto_screen_text(slot, hold_local),
-        reply_markup=booking_crypto_kb(booking_id),
-        link_preview_options=_NO_PREVIEW,
-    )
-
-
-@router.callback_query(F.data.startswith("pay_back:"))
-async def cb_pay_back(callback: CallbackQuery, booking_config: BookingConfig) -> None:
-    held = await _held_booking(callback, booking_config)
-    if held is None:
-        return
-    booking_id, slot, hold_local = held
-    await callback.message.edit_text(
-        _pay_screen_text(slot, hold_local),
-        reply_markup=booking_pay_kb(booking_id),
-        link_preview_options=_NO_PREVIEW,
+# Крипто-оплату убрали вместе с переездом на lava.top. Экраны со старыми
+# кнопками ещё могут висеть в чатах — без хендлера тап молча ничего бы не
+# делал. «✓ Я оплатил(а)» с крипто-экрана (paid_crypto:) по-прежнему работает
+# ниже: человек мог перевести USDT до переезда.
+@router.callback_query(F.data.startswith("pay_crypto:") | F.data.startswith("pay_back:"))
+async def cb_crypto_removed(callback: CallbackQuery) -> None:
+    await callback.answer(
+        "Оплата криптовалютой больше недоступна 🤍 Запишись заново и выбери "
+        "оплату в рублях или евро.",
+        show_alert=True,
     )
 
 
@@ -370,6 +318,20 @@ def _client_line(callback: CallbackQuery) -> str:
     )
 
 
+async def client_line_for(tg_id: int) -> str:
+    """То же, что _client_line, но по данным из БД — для уведомлений, которые
+    шлёт фоновая задача (колбэка с from_user там нет)."""
+    from database import User
+    async with get_session() as session:
+        user = await session.get(User, tg_id)
+    name = user.full_name if user and user.full_name else "без имени"
+    username = f"@{user.username}" if user and user.username else "нет username"
+    return (
+        f"<b>Клиент:</b> {html.quote(name)} — {username} "
+        f'(<a href="tg://user?id={tg_id}">открыть</a>, id {tg_id})'
+    )
+
+
 async def build_event_fields(session, tg_id: int) -> tuple[str, str]:
     """Заголовок и описание события в календаре по данным клиента из User."""
     from database import User
@@ -377,6 +339,50 @@ async def build_event_fields(session, tg_id: int) -> tuple[str, str]:
     name = (user.full_name if user and user.full_name else f"id {tg_id}")
     handle = f"@{user.username}" if user and user.username else f"id {tg_id}"
     return f"Консультация — {name}", f"Клиент: {name} ({handle})"
+
+
+async def finalize_booking(gcal: GoogleCalendar, booking_id: int,
+                           from_statuses: tuple[str, ...]):
+    """Перевести запись в confirmed и создать событие в календаре.
+
+    Переход атомарный (UPDATE … WHERE status IN from_statuses): ручное
+    подтверждение Ланы, кнопка «Я оплатил(а)» и фоновая проверка оплаты могут
+    сойтись на одной записи, событие должно появиться ровно одно. None — запись
+    уже не в этих статусах. Пока события нет, стоит calendar_sync_failed=True:
+    так слот считается занятым (_occupied_slots) и в окно между переходом и
+    созданием события его не выдадут другому. Возвращает (слот, telegram_id
+    клиента, sync_failed)."""
+    async with get_session() as session:
+        res = await session.execute(
+            update(Booking)
+            .where(Booking.id == booking_id, Booking.status.in_(from_statuses))
+            .values(status="confirmed", calendar_sync_failed=True)
+            .execution_options(synchronize_session=False)
+        )
+        await session.commit()
+        if res.rowcount != 1:
+            return None
+        booking = await session.get(Booking, booking_id)
+        slot = booking.slot_start
+        if slot.tzinfo is None:
+            slot = slot.replace(tzinfo=timezone.utc)
+        user_id = booking.telegram_id
+        title, desc = await build_event_fields(session, user_id)
+
+    event_id = None
+    sync_failed = False
+    try:
+        event_id = await gcal.create_event(slot, title, desc)
+    except Exception:
+        logger.exception("Не удалось создать событие для booking %s", booking_id)
+        sync_failed = True
+
+    async with get_session() as session:
+        booking = await session.get(Booking, booking_id)
+        booking.google_event_id = event_id
+        booking.calendar_sync_failed = sync_failed
+        await session.commit()
+    return slot, user_id, sync_failed
 
 
 async def _notify_admins(bot: Bot, admin_ids, text: str, reply_markup=None) -> None:
@@ -403,7 +409,10 @@ async def cb_paid_crypto(callback: CallbackQuery, bot: Bot, admin_ids: list[int]
 
 async def _claim_payment(callback: CallbackQuery, bot: Bot, admin_ids: list[int],
                          *, crypto: bool) -> None:
-    """«Я оплатил(а)» с любого экрана оплаты. Способ влияет только на текст
+    """Легаси до lava.top: «Я оплатил(а)» со старых экранов оплаты (Tribute
+    или USDT). Новые экраны таких кнопок не показывают — оплату lava.top бот
+    видит сам (payments.py), — но экран, открытый до переезда, ещё может
+    висеть в чате, а деньги могли уйти. Способ влияет только на текст
     уведомления Лане — иначе непонятно, где искать деньги."""
     try:
         booking_id = int(callback.data.split(":", 1)[1])
@@ -429,7 +438,7 @@ async def _claim_payment(callback: CallbackQuery, bot: Bot, admin_ids: list[int]
         f"Как только Лана подтвердит, придёт сообщение о записи на "
         f"<b>{format_slot_human(slot)}</b>."
     )
-    method = f"криптовалюта ({CRYPTO_AMOUNT_TEXT})" if crypto else "Tribute"
+    method = "криптовалюта (USDT)" if crypto else "Tribute"
     where = ("Проверь поступление USDT на кошелёк и подтверди ⇩" if crypto
              else "Проверь оплату в Tribute и подтверди ⇩")
     await _notify_admins(

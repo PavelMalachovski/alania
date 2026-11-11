@@ -6,6 +6,7 @@ from .consultation import router as consultation_router
 from .fallback import router as fallback_router
 from .info import router as info_router
 from .lead import router as lead_router
+from .payments import router as payments_router
 from .quiz import router as quiz_router
 from .reply import router as reply_router
 from .start import router as start_router
@@ -17,6 +18,7 @@ def setup_routers() -> Router:
     router.include_router(start_router)
     router.include_router(lead_router)
     router.include_router(booking_router)
+    router.include_router(payments_router)
     router.include_router(consultation_router)
     router.include_router(info_router)
     router.include_router(quiz_router)

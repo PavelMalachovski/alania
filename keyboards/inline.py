@@ -1,21 +1,15 @@
 import calendar as _calendar
 from datetime import date as _date
 
-from aiogram.types import CopyTextButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
-from formatting import CRYPTO_ADDRESS
 
 # ── Внешние ссылки ───────────────────────────────────────────────────
 DM_URL = "https://t.me/LanaLeonovich"
-PAY_RUB_URL = "https://web.tribute.tg/p/rTr"
-PAY_EUR_URL = "https://web.tribute.tg/p/tse"
 GAME_URL = "https://t.me/tvoya_vechnost_bot"
-# Курс-практикум «Взломай Реальность»: отдельные продукты Tribute, доступ
-# к курсу Tribute выдаёт сам после оплаты.
-COURSE_PAY_RUB_URL = "https://web.tribute.tg/p/Ezz"
-COURSE_PAY_EUR_URL = "https://web.tribute.tg/p/Ezx"
 CHANNEL_URL = "https://t.me/+yL84pnnJCUNlZjJk"
+
+# Оплата — счета lava.top (lava.py), ссылок на оплату здесь нет: ссылка
+# своя у каждого счёта и приходит из API.
 
 # Юр. документы — Google Docs Ланы, открыты по ссылке без входа в аккаунт.
 # Форма /preview — read-only читалка: открывается прямо в браузере и не тянет
@@ -26,7 +20,6 @@ _GDOC = "https://docs.google.com/document/d/{}/preview"
 LEGAL_OFFER_URL = _GDOC.format("1uKkXGBah_qI0jlRUBaD0SyylDStKr2sP")
 LEGAL_PRIVACY_URL = _GDOC.format("1_ZJE1ejwbpGsbt3tkF89EyuyiA2WPeVm")
 LEGAL_CONSENT_URL = _GDOC.format("1CPsoI6U1nC1gN6O8_QanG1fi4-mSHa-w")
-LEGAL_CRYPTO_URL = _GDOC.format("1uDfasXkWk9bQDE0tVvjKD_qegS3hhRh5")
 
 
 def ask_lana_kb():
@@ -123,28 +116,51 @@ def booking_error_kb():
     return builder.as_markup()
 
 
+def _pay_buttons(builder, product: str, booking_id: int = 0) -> None:
+    """«Оплатить в рублях / в евро» → счёт lava.top (handlers/payments.py)."""
+    builder.button(text="Оплатить в рублях",
+                   callback_data=f"lava_pay:{product}:RUB:{booking_id}")
+    builder.button(text="Оплатить в евро",
+                   callback_data=f"lava_pay:{product}:EUR:{booking_id}")
+
+
 def booking_pay_kb(booking_id: int):
     builder = InlineKeyboardBuilder()
-    builder.button(text="Оплатить в рублях", url=PAY_RUB_URL)
-    builder.button(text="Оплатить в евро", url=PAY_EUR_URL)
-    builder.button(text="Оплатить в криптовалюте",
-                   callback_data=f"pay_crypto:{booking_id}")
-    builder.button(text="✓ Я оплатил(а)", callback_data=f"paid:{booking_id}")
+    _pay_buttons(builder, "session", booking_id)
     builder.button(text="Написать в ЛС", url=DM_URL)
     builder.adjust(1)
     return builder.as_markup()
 
 
-def booking_crypto_kb(booking_id: int):
-    """Экран крипто-оплаты: копирование адреса — нативной кнопкой Telegram
-    (copy_text, Bot API 8.0); адрес продублирован в тексте тегом <code> —
-    на клиентах постарше копируется тапом по нему."""
+def lava_email_kb(product: str, booking_id: int = 0):
+    """Экран «напиши email»: ввод ждёт FSM, отсюда — только отмена."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="⧉ Скопировать адрес кошелька",
-                   copy_text=CopyTextButton(text=CRYPTO_ADDRESS))
-    builder.button(text="✓ Я оплатил(а)", callback_data=f"paid_crypto:{booking_id}")
-    builder.button(text="⇦ Назад", callback_data=f"pay_back:{booking_id}")
+    builder.button(text="⇦ Отмена", callback_data=f"lava_back:{product}:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def lava_invoice_kb(payment_url: str, amount_label: str, payment_id: int,
+                    product: str, currency: str, booking_id: int = 0):
+    """Счёт выставлен: ссылка на оплату lava.top, ручная проверка статуса
+    (фоновая проверка идёт и без неё), смена email, назад к выбору валюты."""
+    builder = InlineKeyboardBuilder()
+    builder.button(text=f"Оплатить {amount_label}", url=payment_url)
+    builder.button(text="✓ Я оплатил(а)", callback_data=f"lava_check:{payment_id}")
+    builder.button(text="Изменить email",
+                   callback_data=f"lava_email:{product}:{currency}:{booking_id}")
+    builder.button(text="⇦ Назад", callback_data=f"lava_back:{product}:{booking_id}")
     builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def lava_error_kb(product: str, currency: str, booking_id: int = 0):
+    builder = InlineKeyboardBuilder()
+    builder.button(text="↻ Попробовать снова",
+                   callback_data=f"lava_pay:{product}:{currency}:{booking_id}")
+    builder.button(text="Написать в ЛС", url=DM_URL)
+    builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -186,6 +202,7 @@ def followup_kb():
 
 def game_kb():
     builder = InlineKeyboardBuilder()
+    _pay_buttons(builder, "game")
     builder.button(text="Перейти к игре", url=GAME_URL)
     builder.button(text="⇦ Назад", callback_data="start_menu")
     builder.adjust(1)
@@ -193,11 +210,10 @@ def game_kb():
 
 
 def course_kb():
-    """Экран курса: оплата только через Tribute (рубли/евро), без крипты и
-    без «Я оплатил(а)» — доступ Tribute выдаёт сам, подтверждать нечего."""
+    """Экран курса: счёт lava.top в рублях или евро. Доступ к курсу lava.top
+    присылает покупателю на email сам, Лане подтверждать нечего."""
     builder = InlineKeyboardBuilder()
-    builder.button(text="Оплатить в рублях", url=COURSE_PAY_RUB_URL)
-    builder.button(text="Оплатить в евро", url=COURSE_PAY_EUR_URL)
+    _pay_buttons(builder, "course")
     builder.button(text="Написать в ЛС", url=DM_URL)
     builder.button(text="⇦ В меню", callback_data="start_menu")
     builder.adjust(1)

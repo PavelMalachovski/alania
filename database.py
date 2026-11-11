@@ -30,6 +30,8 @@ class User(Base):
     telegram_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str | None] = mapped_column(String(255))
     full_name: Mapped[str | None] = mapped_column(String(255))
+    # email для счетов lava.top: спрашиваем один раз при первой оплате
+    email: Mapped[str | None] = mapped_column(String(255))
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -54,8 +56,12 @@ class Lead(Base):
 class Booking(Base):
     """Запись на слот. Статусы:
     held — слот держится за клиентом на время оплаты (held_until);
-    pay_claimed — нажал «Я оплатил(а)», событие в календаре создано;
-    confirmed — Лана подтвердила; cancelled — Лана отклонила / отменено."""
+    confirmed — оплата пришла (lava.top, автоматически) или Лана подтвердила
+    вручную, событие в календаре создано;
+    pay_claimed — легаси до lava.top: нажал «Я оплатил(а)», ждёт Лану;
+    paid_conflict — оплата пришла, когда холд истёк и слот успели занять:
+    Лана решает вручную (перенос или возврат);
+    cancelled — Лана отклонила / отменено."""
 
     __tablename__ = "bookings"
 
@@ -69,6 +75,30 @@ class Booking(Base):
     reschedule_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reschedule_reason: Mapped[str | None] = mapped_column(String(500))
     reschedule_status: Mapped[str | None] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Payment(Base):
+    """Счёт lava.top. product: session (запись, booking_id) / course / game.
+    status — как у lava.top: new / in-progress → completed / failed /
+    cancelled; плюс наш expired — перестали опрашивать (см. payments.py).
+    message_id — экран оплаты в чате клиента: после оплаты его убираем."""
+
+    __tablename__ = "payments"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    product: Mapped[str] = mapped_column(String(20))
+    booking_id: Mapped[int | None] = mapped_column(index=True)
+    invoice_id: Mapped[str] = mapped_column(String(64), unique=True)
+    currency: Mapped[str] = mapped_column(String(3))
+    amount: Mapped[float] = mapped_column(default=0)
+    email: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(20), default="new", index=True)
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -100,6 +130,7 @@ _MIGRATIONS = [
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_to TIMESTAMP WITH TIME ZONE",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_reason VARCHAR(500)",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_status VARCHAR(20)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
 ]
 
 

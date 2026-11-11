@@ -55,9 +55,16 @@ async def main() -> None:
 
     import booking_config
     from google_calendar import GoogleCalendar
+    from lava import LavaClient
+    from payments import payments_loop
 
     bcfg = booking_config.load()
     gcal = GoogleCalendar.from_env()
+    # LAVA_API_KEY — ключ API lava.top (кабинет → Интеграции). Без него кнопки
+    # оплаты отвечают «оплата недоступна», а не падают.
+    lava = LavaClient.from_env()
+    if lava is None:
+        logging.error("LAVA_API_KEY не задан — оплата через lava.top выключена")
 
     await init_db(database_url)
 
@@ -78,10 +85,15 @@ async def main() -> None:
         return True
 
     followup_task = asyncio.create_task(followup_loop(bot))
+    payments_task = (asyncio.create_task(payments_loop(bot, admin_ids, gcal, bcfg, lava))
+                     if lava else None)
     try:
-        await dp.start_polling(bot, admin_ids=admin_ids, booking_config=bcfg, gcal=gcal)
+        await dp.start_polling(bot, admin_ids=admin_ids, booking_config=bcfg,
+                               gcal=gcal, lava=lava)
     finally:
         followup_task.cancel()
+        if payments_task:
+            payments_task.cancel()
         await close_db()
         await bot.session.close()
 

@@ -1,9 +1,9 @@
 """Курс-практикум «Взломай Реальность»: кнопка нижней клавиатуры, экран
-с оплатой через Tribute и deep link ?start=course с лендинга."""
+с оплатой через lava.top и deep link ?start=course с лендинга."""
 import pytest
 
 from handlers.info import COURSE_TEXT, GAME_TEXT
-from keyboards.inline import COURSE_PAY_EUR_URL, COURSE_PAY_RUB_URL, course_kb
+from keyboards.inline import course_kb
 from keyboards.reply import BTN_COURSE, main_reply_kb
 from tests.test_booking_flow import CLIENT_ID, env  # харнес
 from tests.test_reply_keyboard import _send_text
@@ -25,20 +25,18 @@ def test_course_button_is_full_width_row():
     assert sum(len(r) for r in rows) == 8
 
 
-def test_course_kb_pays_only_via_tribute():
-    """Как у личной работы — рубли и евро, но без крипты и «Я оплатил(а)»:
-    доступ к курсу Tribute выдаёт сам, подтверждать Лане нечего."""
+def test_course_kb_pays_via_lava():
+    """Как у сессии — рубли и евро, но счёт lava.top без «Я оплатил(а)» на
+    этом экране: доступ к курсу lava.top присылает на email сам."""
     buttons = [b for row in course_kb().inline_keyboard for b in row]
-    urls = {b.text: b.url for b in buttons if b.url}
-    assert urls["Оплатить в рублях"] == COURSE_PAY_RUB_URL == "https://web.tribute.tg/p/Ezz"
-    assert urls["Оплатить в евро"] == COURSE_PAY_EUR_URL == "https://web.tribute.tg/p/Ezx"
     cbs = [b.callback_data for b in buttons if b.callback_data]
-    assert cbs == ["start_menu"]
+    assert cbs == ["lava_pay:course:RUB:0", "lava_pay:course:EUR:0", "start_menu"]
+    assert not any("tribute" in (b.url or "") for b in buttons)
 
 
 def test_course_text_matches_landing():
     for needle in ("«ВЗЛОМАЙ РЕАЛЬНОСТЬ»", "5-дневная программа", "База практик",
-                   "Для кого практикум", "11 € / 1000 ₽"):
+                   "Для кого практикум", "28 € / 2800 ₽"):
         assert needle in COURSE_TEXT
 
 
@@ -60,7 +58,8 @@ async def test_reply_course_opens_course_screen(env):
                for n, d in session.log), "тап по кнопке не удалён"
     last = _last_send(session)
     assert last["text"] == COURSE_TEXT
-    assert {b.get("url") for b in _buttons(last)} >= {COURSE_PAY_RUB_URL, COURSE_PAY_EUR_URL}
+    assert {b.get("callback_data") for b in _buttons(last)} >= {
+        "lava_pay:course:RUB:0", "lava_pay:course:EUR:0"}
 
 
 @pytest.mark.asyncio
