@@ -271,6 +271,20 @@ async def cb_book_slot(
         return
 
     async with get_session() as session:
+        # Новый выбор времени отпускает прежние неоплаченные брони клиента:
+        # платят всё равно за одну. Иначе каждый «передумал и выбрал другое
+        # время» оставлял бронь на BOOKING_HOLD_MINUTES, и пять таких подряд
+        # упирались в MAX_ACTIVE_BOOKINGS («уже 5 активных записей») при пустых
+        # «Моих записях». Отпускаем, истекая холд (held_until=now), а не
+        # отменой: если старый счёт lava.top всё же оплатят, payments.py
+        # проведёт его как позднюю оплату (подтвердит, если слот свободен).
+        await session.execute(
+            update(Booking)
+            .where(Booking.telegram_id == callback.from_user.id,
+                   Booking.status == "held", Booking.held_until > now)
+            .values(held_until=now)
+            .execution_options(synchronize_session=False)
+        )
         if await _active_booking_count(session, callback.from_user.id, now) >= MAX_ACTIVE_BOOKINGS:
             await callback.answer(
                 "У тебя уже 5 активных записей 🤍 Заверши или перенеси одну, "

@@ -526,3 +526,24 @@ async def test_my_bookings_lists_future_paid(env):
     await press(dp, bot, "my_bookings")
     cbs = [b.get("callback_data", "") for row in last_kb(session) for b in row]
     assert sum(c.startswith("resched:") for c in cbs) == 1
+
+
+@pytest.mark.asyncio
+async def test_repicking_time_releases_previous_hold(env):
+    """Выбрал время, не оплатил, выбрал другое — и так много раз. Раньше
+    каждая неоплаченная бронь держалась 30 минут и считалась «активной
+    записью»: на шестой раз бот отвечал «у тебя уже 5 активных записей»,
+    хотя в «Моих записях» пусто."""
+    dp, bot, gcal, session = env
+    from sqlalchemy import select, func
+    for _ in range(7):
+        await press(dp, bot, "booking_start")
+        await press(dp, bot, find_cb(session, "book_day:"))
+        await press(dp, bot, find_cb(session, "book_slot:"))
+    now = datetime.now(timezone.utc)
+    async with get_session() as s:
+        total = (await s.execute(select(func.count()).select_from(Booking))).scalar()
+        rows = (await s.execute(select(Booking.held_until))).scalars().all()
+    active = [h for h in rows if (h if h.tzinfo else h.replace(tzinfo=timezone.utc)) > now]
+    assert total == 7            # все семь выборов прошли, лимит не сработал
+    assert len(active) == 1      # держится только последний
