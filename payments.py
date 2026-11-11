@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot, html
 from aiogram.exceptions import TelegramAPIError
+from aiogram.types import LinkPreviewOptions
 from sqlalchemy import select, update
 
 from booking_config import BookingConfig
@@ -29,7 +30,7 @@ from handlers.booking import (
     client_line_for,
     finalize_booking,
 )
-from keyboards.inline import lead_done_kb
+from keyboards.inline import LEGAL_OFFER_URL, lead_done_kb
 from lava import COMPLETED, FAILED, PENDING, LavaClient, LavaError
 from ui import delete_safe
 
@@ -64,9 +65,22 @@ def _as_utc(dt: datetime | None) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def contract_note(waiver_at: datetime | None, cfg: BookingConfig) -> str:
+    """Подтверждение договора и согласия после оплаты (оферта п. 7.2.1)."""
+    note = (f'Договор заключён на условиях <a href="{LEGAL_OFFER_URL}">Публичной '
+            "оферты</a>.")
+    if waiver_at:
+        local = _as_utc(waiver_at).astimezone(cfg.tz)
+        note += (" Перед оплатой ты попросил(а) начать оказание услуги до "
+                 f"истечения 14 дней — {local:%d.%m.%Y %H:%M} (Прага).")
+    return note
+
+
 async def _send(bot: Bot, chat_id: int, text: str, reply_markup=None) -> None:
     try:
-        await bot.send_message(chat_id, text, reply_markup=reply_markup)
+        # в тексте ссылка на оферту — карточку превью документа гасим
+        await bot.send_message(chat_id, text, reply_markup=reply_markup,
+                               link_preview_options=LinkPreviewOptions(is_disabled=True))
     except TelegramAPIError:
         logger.warning("Сообщение об оплате не доставлено %s", chat_id)
 
@@ -127,6 +141,7 @@ async def _on_completed(bot, admin_ids, gcal, cfg, payment_id: int, now: datetim
     money = amount_label(p.amount, p.currency)
     email = html.quote(p.email)  # ввёл сам клиент, а сообщения — HTML
     who = await client_line_for(p.telegram_id)
+    note = "\n\n" + contract_note(p.waiver_at, cfg)
 
     if p.product != "session":
         title = PRODUCT_TITLES.get(p.product, p.product)
@@ -134,7 +149,7 @@ async def _on_completed(bot, admin_ids, gcal, cfg, payment_id: int, now: datetim
             bot, p.telegram_id,
             "<b>✦ Оплата прошла, спасибо!</b> 🤍\n\n"
             f"lava.top пришлёт доступ к «{title}» на <b>{email}</b> — "
-            "загляни в почту (и в папку «Спам», если письма нет).",
+            "загляни в почту (и в папку «Спам», если письма нет)." + note,
             reply_markup=lead_done_kb(),
         )
         await _notify_admins(
@@ -148,7 +163,8 @@ async def _on_completed(bot, admin_ids, gcal, cfg, payment_id: int, now: datetim
     outcome, slot, sync_failed = await _settle_booking(gcal, cfg, p.booking_id, now)
     slot_text = format_slot_human(slot) if slot else "—"
     if outcome == "confirmed":
-        await _send(bot, p.telegram_id, BOOKING_CONFIRMED_TEXT.format(slot=slot_text),
+        await _send(bot, p.telegram_id,
+                    BOOKING_CONFIRMED_TEXT.format(slot=slot_text) + note,
                     reply_markup=lead_done_kb())
         warn = "\n\n⚠️ Событие в календаре не создалось — оформи вручную." if sync_failed else ""
         await _notify_admins(

@@ -53,9 +53,10 @@ python main.py
   (двойная оплата) — Лане «лишняя оплата». Курс/игра — клиенту «доступ
   придёт на email», Лане «покупка». Экран счёта после оплаты удаляется
   (`Payment.message_id`), чтобы не заплатить второй раз.
-- `database.py` — модели (`User` (+ `email` для счетов lava.top), `Lead`,
+- `database.py` — модели (`User` (+ `email` для счетов lava.top,
+  `health_consent_at`), `Lead`,
   `Booking`, `Payment` (счёт lava.top: продукт, `booking_id` для сессии,
-  `invoice_id`, статус, `checked_at` для расписания опроса), `Setting`,
+  `invoice_id`, статус, `waiver_at`, `checked_at` для расписания опроса), `Setting`,
   `Event`) и
   подключение. Схема создаётся через `create_all` при старте (создаёт только
   отсутствующие таблицы, колонки в существующих не меняет). Поверх этого
@@ -166,7 +167,16 @@ python main.py
   - `payments.py` — оплата через lava.top для сессии, курса и игры:
     `lava_pay:<product>:<RUB|EUR>:<booking_id>` (product `session`/`course`/
     `game`, booking_id > 0 только у сессии — whitelist + проверка, что бронь
-    своя и холд жив) → email из `User.email` или FSM `PayForm.email`
+    своя и холд жив) → подтверждения (оферта п. 7.2.1, ст. 9 GDPR), каждое
+    отдельной кнопкой `lava_ok:<health|waiver>:…`: согласие на сведения о
+    состоянии — один раз для сессии и курса (`User.health_consent_at`),
+    просьба начать до истечения 14 дней — под каждый заказ (FSM-данные
+    `waivers`, ключ `<product>:<booking_id>`, живёт `CONSENT_TTL` = 1 ч,
+    при счёте копируется в `Payment.waiver_at`; поэтому FSM в этом модуле
+    сбрасывается `set_state(None)`, а не `clear()`). Без подтверждений счёт
+    не выставляется — проверка ещё и в `_issue_invoice`. После оплаты
+    клиенту — подтверждение договора со временем согласия
+    (`payments.contract_note`). Дальше → email из `User.email` или FSM `PayForm.email`
     (паттерн «якорь», как причина переноса: id экрана в FSM, ответ клиента
     удаляется, экран правится на месте; пока ждём email, текст кнопок нижней
     клавиатуры — тоже «ввод», как и в переносе: отказ «не похоже на email» и

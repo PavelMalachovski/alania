@@ -140,6 +140,23 @@ def lava_email_kb(product: str, booking_id: int = 0):
     return builder.as_markup()
 
 
+def lava_consent_kb(items: "list[tuple[int, str, bool]]", product: str,
+                    currency: str, booking_id: int = 0):
+    """Подтверждения перед оплатой — по кнопке на пункт. items — (номер,
+    health|waiver, уже подтверждён). Подтверждённый пункт — неактивная
+    отметка: снять согласие кнопкой нельзя (отзыв — через Лану)."""
+    builder = InlineKeyboardBuilder()
+    for n, kind, done in items:
+        if done:
+            builder.button(text=f"✅ Пункт {n} подтверждён", callback_data="noop")
+        else:
+            builder.button(text=f"Подтверждаю пункт {n}",
+                           callback_data=f"lava_ok:{kind}:{product}:{currency}:{booking_id}")
+    builder.button(text="⇦ Назад", callback_data=f"lava_back:{product}:{booking_id}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 def lava_invoice_kb(payment_url: str, amount_label: str, payment_id: int,
                     product: str, currency: str, booking_id: int = 0):
     """Счёт выставлен: ссылка на оплату lava.top, ручная проверка статуса

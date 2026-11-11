@@ -32,6 +32,9 @@ class User(Base):
     full_name: Mapped[str | None] = mapped_column(String(255))
     # email для счетов lava.top: спрашиваем один раз при первой оплате
     email: Mapped[str | None] = mapped_column(String(255))
+    # явное согласие на обработку сведений о состоянии (ст. 9 GDPR): даётся
+    # отдельной кнопкой один раз, перед первой оплатой сессии или курса
+    health_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -98,6 +101,9 @@ class Payment(Base):
     email: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default="new", index=True)
     message_id: Mapped[int | None] = mapped_column(BigInteger)
+    # когда клиент попросил начать оказание до истечения 14 дней (оферта
+    # п. 7.2.1) — отдельной кнопкой перед этим заказом
+    waiver_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -131,6 +137,8 @@ _MIGRATIONS = [
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_reason VARCHAR(500)",
     "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_status VARCHAR(20)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS health_consent_at TIMESTAMP WITH TIME ZONE",
+    "ALTER TABLE payments ADD COLUMN IF NOT EXISTS waiver_at TIMESTAMP WITH TIME ZONE",
 ]
 
 

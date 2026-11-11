@@ -47,6 +47,18 @@ async def _hold(dp, bot, session) -> int:
         return (await s.execute(select(Booking.id).order_by(Booking.id.desc()))).scalars().first()
 
 
+async def _pay(dp, bot, session, data):
+    """Нажать «Оплатить …» и подтвердить все пункты экрана согласий, если он
+    показан (каждый — своей кнопкой, как клиент)."""
+    await press(dp, bot, data)
+    for _ in range(3):
+        ok = find_cb(session, "lava_ok:")
+        if ok is None:
+            return
+        await press(dp, bot, ok)
+    raise AssertionError("экран согласий не отпускает")
+
+
 async def _save_email(email=EMAIL, tg_id=CLIENT_ID):
     async with get_session() as s:
         s.add(User(telegram_id=tg_id, full_name="Марина", username="marina", email=email))
@@ -57,7 +69,7 @@ async def _invoice(dp, bot, session, currency="RUB"):
     """Бронь + сохранённый email + счёт. (booking_id, Payment)."""
     await _save_email()
     bid = await _hold(dp, bot, session)
-    await press(dp, bot, f"lava_pay:session:{currency}:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:{currency}:{bid}")
     async with get_session() as s:
         payment = (await s.execute(select(Payment).order_by(Payment.id.desc()))).scalars().first()
     return bid, payment
@@ -94,7 +106,7 @@ async def test_first_payment_asks_email_once(env):
     dp, bot, gcal, session = env
     lava = dp["lava"]
     bid = await _hold(dp, bot, session)
-    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     assert "Напиши свой email" in _last_edit(session)["text"]
     assert lava.created == []
 
@@ -116,7 +128,7 @@ async def test_first_payment_asks_email_once(env):
     assert (p.booking_id, p.product, p.currency, p.status) == (bid, "session", "RUB", "new")
 
     # второй счёт — без вопроса про email
-    await press(dp, bot, f"lava_pay:session:EUR:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:EUR:{bid}")
     assert lava.created[-1] == (EMAIL, OFFERS["session"], "EUR")
 
 
@@ -126,7 +138,7 @@ async def test_email_rejected_by_lava_asks_again(env):
     await _save_email("typo@mail.rru")
     bid = await _hold(dp, bot, session)
     dp["lava"].fail = "email"
-    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     assert "lava.top не принял этот email" in _last_edit(session)["text"]
     dp["lava"].fail = None
     await _send_text(dp, bot, EMAIL, mid=8101)
@@ -139,7 +151,7 @@ async def test_lava_down_shows_retry_not_dead_button(env):
     await _save_email()
     bid = await _hold(dp, bot, session)
     dp["lava"].fail = "down"
-    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     last = _last_edit(session)
     assert last["text"] == PAY_UNAVAILABLE_TEXT
     cbs = [b.get("callback_data") for row in last["reply_markup"]["inline_keyboard"] for b in row]
@@ -152,7 +164,7 @@ async def test_no_api_key_shows_unavailable(env):
     await _save_email()
     bid = await _hold(dp, bot, session)
     dp["lava"] = None
-    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     assert _last_edit(session)["text"] == PAY_UNAVAILABLE_TEXT
 
 
@@ -239,7 +251,7 @@ async def test_late_payment_for_free_slot_still_confirms(env):
 async def test_second_payment_for_same_booking_flags_lana(env):
     dp, bot, gcal, session = env
     bid, rub = await _invoice(dp, bot, session, "RUB")
-    await press(dp, bot, f"lava_pay:session:EUR:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:EUR:{bid}")
     async with get_session() as s:
         eur = (await s.execute(select(Payment).where(Payment.currency == "EUR"))).scalar_one()
     dp["lava"].statuses[rub.invoice_id] = "completed"
@@ -289,7 +301,7 @@ async def test_polling_slows_down_then_gives_up(env):
 async def test_course_payment_sends_access_note(env):
     dp, bot, gcal, session = env
     await _save_email()
-    await press(dp, bot, "lava_pay:course:RUB:0")
+    await _pay(dp, bot, session, "lava_pay:course:RUB:0")
     assert dp["lava"].created == [(EMAIL, OFFERS["course"], "RUB")]
     assert "Курс-практикум" in _last_edit(session)["text"]
     async with get_session() as s:
@@ -310,7 +322,7 @@ async def test_game_screen_sells_via_lava_and_keeps_game_link(env):
     assert "lava_pay:game:RUB:0" in cbs and "lava_pay:game:EUR:0" in cbs
     assert GAME_URL in [b.url for b in buttons]
     await _save_email()
-    await press(dp, bot, "lava_pay:game:EUR:0")
+    await _pay(dp, bot, session, "lava_pay:game:EUR:0")
     assert dp["lava"].created == [(EMAIL, OFFERS["game"], "EUR")]
 
 
@@ -318,7 +330,7 @@ async def test_game_screen_sells_via_lava_and_keeps_game_link(env):
 async def test_back_from_email_prompt_cancels_input(env):
     dp, bot, gcal, session = env
     bid = await _hold(dp, bot, session)
-    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     await press(dp, bot, f"lava_back:session:{bid}")
     assert "Твой слот" in _last_edit(session)["text"]
     await _send_text(dp, bot, EMAIL, mid=8201)
@@ -379,3 +391,82 @@ async def test_late_payment_close_to_session_is_not_a_false_conflict(env):
     dp["lava"].statuses["inv_late"] = "completed"
     await _pass(dp, bot, gcal, now=now)
     assert (await _booking(bid)).status == "confirmed"
+
+
+def _consent_screen(session):
+    last = _last_edit(session)
+    cbs = [b.get("callback_data", "") for row in last["reply_markup"]["inline_keyboard"]
+           for b in row]
+    return last["text"], [c for c in cbs if c.startswith("lava_ok:")]
+
+
+@pytest.mark.asyncio
+async def test_no_invoice_without_separate_consents(env):
+    """Оферта п. 7.2.1: два подтверждения, каждое своей кнопкой, до счёта."""
+    dp, bot, gcal, session = env
+    await _save_email()
+    bid = await _hold(dp, bot, session)
+    await press(dp, bot, f"lava_pay:session:RUB:{bid}")
+    text, oks = _consent_screen(session)
+    assert "явное согласие" in text and "14 дней" in text
+    assert oks == [f"lava_ok:health:session:RUB:{bid}", f"lava_ok:waiver:session:RUB:{bid}"]
+    assert dp["lava"].created == []
+
+    await press(dp, bot, oks[0])                     # только первый пункт
+    text, oks = _consent_screen(session)
+    assert oks == [f"lava_ok:waiver:session:RUB:{bid}"]
+    assert dp["lava"].created == []
+    async with get_session() as s:
+        assert (await s.get(User, CLIENT_ID)).health_consent_at is not None
+
+    await press(dp, bot, oks[0])                     # второй — и сразу счёт
+    assert len(dp["lava"].created) == 1
+    async with get_session() as s:
+        p = (await s.execute(select(Payment))).scalar_one()
+    assert p.waiver_at is not None
+
+
+@pytest.mark.asyncio
+async def test_health_once_waiver_per_order(env):
+    dp, bot, gcal, session = env
+    await _save_email()
+    bid = await _hold(dp, bot, session)
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    # другой заказ (курс): согласие о состоянии уже есть, про 14 дней — снова
+    await press(dp, bot, "lava_pay:course:RUB:0")
+    text, oks = _consent_screen(session)
+    assert oks == ["lava_ok:waiver:course:RUB:0"]
+    assert "явное согласие" not in text
+
+
+@pytest.mark.asyncio
+async def test_game_needs_only_waiver(env):
+    dp, bot, gcal, session = env
+    await _save_email()
+    await press(dp, bot, "lava_pay:game:RUB:0")
+    _, oks = _consent_screen(session)
+    assert oks == ["lava_ok:waiver:game:RUB:0"]
+
+
+@pytest.mark.asyncio
+async def test_stale_waiver_is_asked_again(env, monkeypatch):
+    import handlers.payments as hp
+    dp, bot, gcal, session = env
+    await _save_email()
+    await _pay(dp, bot, session, "lava_pay:game:RUB:0")
+    monkeypatch.setattr(hp, "CONSENT_TTL", timedelta(0))
+    await press(dp, bot, "lava_pay:game:EUR:0")
+    _, oks = _consent_screen(session)
+    assert oks == ["lava_ok:waiver:game:EUR:0"]
+
+
+@pytest.mark.asyncio
+async def test_paid_message_confirms_contract_and_waiver(env):
+    dp, bot, gcal, session = env
+    bid, p = await _invoice(dp, bot, session)
+    dp["lava"].statuses[p.invoice_id] = "completed"
+    await _pass(dp, bot, gcal)
+    msg = [d for n, d in session.log if n == "SendMessage" and d.get("chat_id") == CLIENT_ID
+           and "Запись подтверждена" in (d.get("text") or "")][-1]
+    assert "Публичной оферты" in msg["text"] and "до истечения 14 дней" in msg["text"]
+    assert msg["link_preview_options"]["is_disabled"] is True
