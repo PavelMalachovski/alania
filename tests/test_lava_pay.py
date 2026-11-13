@@ -269,7 +269,18 @@ async def test_failed_payment_tells_client(env):
     await _pass(dp, bot, gcal)
     assert (await _payment(p.id)).status == "failed"
     assert (await _booking(bid)).status == "held"
-    assert any("Оплата не прошла" in t for t in _client_texts(session))
+    assert not any("Оплата не прошла" in t for t in _client_texts(session))
+    admin = [t for t in _admin_texts(session) if "Оплата не прошла" in t]
+    assert len(admin) == 1 and EMAIL in admin[0] and "tg://user?id=" in admin[0]
+
+    # вторая неудачная попытка той же клиентки в течение часа — без нового
+    # уведомления: каждая попытка — отдельный счёт, Лане хватит одного
+    await _pay(dp, bot, session, f"lava_pay:session:EUR:{bid}")
+    async with get_session() as s:
+        p2 = (await s.execute(select(Payment).order_by(Payment.id.desc()))).scalars().first()
+    dp["lava"].statuses[p2.invoice_id] = "failed"
+    await _pass(dp, bot, gcal)
+    assert len([t for t in _admin_texts(session) if "Оплата не прошла" in t]) == 1
 
 
 @pytest.mark.asyncio
@@ -510,3 +521,28 @@ async def test_lava_error_reaches_lana_with_reason(env):
     await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
     assert any("не выставил счёт" in t and "lava down" in t and EMAIL in t
                for t in _admin_texts(session))
+
+
+@pytest.mark.asyncio
+async def test_dot_before_at_is_refused_with_hint(env):
+    """«anna.@gmail.com» — частая опечатка на телефоне; lava.top такой адрес
+    не принимает («must be a well-formed email address»)."""
+    dp, bot, gcal, session = env
+    bid = await _hold(dp, bot, session)
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    await _send_text(dp, bot, "anna.@gmail.com", mid=8401)
+    assert "лишняя точка" in _last_edit(session)["text"]
+    assert dp["lava"].created == []
+
+
+@pytest.mark.asyncio
+async def test_lava_email_rejection_reaches_lana(env):
+    """Адрес прошёл нашу проверку, но lava.top его не принял — клиент вводит
+    заново, а Лане приходит адрес и текст ошибки."""
+    dp, bot, gcal, session = env
+    await _save_email()
+    bid = await _hold(dp, bot, session)
+    dp["lava"].fail = "email"
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    assert "lava.top не принял" in _last_edit(session)["text"]
+    assert any("не принял email" in t and EMAIL in t for t in _admin_texts(session))
