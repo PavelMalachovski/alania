@@ -130,7 +130,7 @@ async def check_payment(bot: Bot, admin_ids: list[int], gcal: GoogleCalendar,
         return COMPLETED
     if status in FAILED:
         if await _claim(payment_id, status):
-            await _on_failed(bot, payment_id)
+            await _on_failed(bot, admin_ids, payment_id, now)
         return status
     return "pending"
 
@@ -249,13 +249,39 @@ async def _settle_booking(gcal: GoogleCalendar, cfg: BookingConfig,
     return "confirmed", slot, sync_failed
 
 
-async def _on_failed(bot: Bot, payment_id: int) -> None:
+FAILED_NOTIFY_WINDOW = timedelta(hours=1)
+
+
+async def _on_failed(bot: Bot, admin_ids: list[int], payment_id: int,
+                     now: datetime) -> None:
+    """Оплата не прошла (карту отклонили и т.п.). Клиентке бот не пишет —
+    по решению владельца ей пишет сама Лана, в личку. Лане — уведомление с
+    контактом. Одно на клиентку и продукт в течение часа: человек обычно
+    пробует несколько раз подряд, и каждая попытка — отдельный счёт."""
     async with get_session() as session:
         p = await session.get(Payment, payment_id)
-    await _send(
-        bot, p.telegram_id,
-        "Оплата не прошла 🤍 Чтобы попробовать ещё раз, нажми «⇦ Назад» на "
-        "экране оплаты и выбери валюту заново — или напиши Лане в личку.",
+        recent = (await session.execute(
+            select(Payment.id).where(
+                Payment.telegram_id == p.telegram_id,
+                Payment.product == p.product,
+                Payment.id != p.id,
+                Payment.status.in_(FAILED),
+                Payment.checked_at >= now - FAILED_NOTIFY_WINDOW,
+            )
+        )).first()
+        booking = await session.get(Booking, p.booking_id) if p.booking_id else None
+    if recent:
+        return
+    slot = (f"\n<b>Слот:</b> {format_slot_human(_as_utc(booking.slot_start))}"
+            if booking else "")
+    who = await client_line_for(p.telegram_id)
+    await _notify_admins(
+        bot, admin_ids,
+        "❗️ <b>Оплата не прошла</b>\n\n"
+        f"<b>Продукт:</b> {PRODUCT_TITLES.get(p.product, p.product)}{slot}\n"
+        f"<b>Сумма:</b> {amount_label(p.amount, p.currency)}\n"
+        f"<b>Email:</b> {html.quote(p.email)}\n{who}\n\n"
+        "Клиенту бот ничего не писал — напиши ему в личку.",
     )
 
 

@@ -59,7 +59,13 @@ logger = logging.getLogger(__name__)
 
 # Только латиница: lava.top кириллицу в адресе не принимает, а на русской
 # раскладке в «gmail» легко попадает кириллическая «а» — снаружи не отличить.
-EMAIL_RE = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+# Правила — как у валидатора lava.top (проверено на живом API): без точки в
+# начале, в конце и перед @, без двух точек подряд, метки домена не
+# начинаются и не кончаются дефисом. Иначе адрес проходил у нас, а lava.top
+# отвечал «must be a well-formed email address».
+_LOCAL = r"[A-Za-z0-9_%+'-]+(?:\.[A-Za-z0-9_%+'-]+)*"
+_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
+EMAIL_RE = re.compile(rf"{_LOCAL}@(?:{_LABEL}\.)+[A-Za-z]{{2,}}")
 EMAIL_LATIN_HINT = (
     "Адрес нужен латиницей — проверь, что клавиатура английская "
     "(русская «а», «о» или «с» выглядят так же, но lava.top их не примет)."
@@ -211,6 +217,21 @@ def _valid_email(email: str) -> bool:
     return len(email) <= 254 and EMAIL_RE.fullmatch(email) is not None
 
 
+def email_problem(email: str) -> str:
+    """Что именно не так с адресом — подсказка вместо «не похоже на email»."""
+    if "@" not in email:
+        return "Это не похоже на email."
+    if not email.isascii():
+        return EMAIL_LATIN_HINT
+    local, _, domain = email.rpartition("@")
+    if ".." in email or local.startswith(".") or local.endswith("."):
+        return ("В адресе лишняя точка — перед «@» и две подряд её быть не может "
+                "(например, <code>anna.@gmail.com</code> → <code>anna@gmail.com</code>).")
+    if " " in email:
+        return "В адресе пробел — убери его."
+    return "Проверь адрес: похоже, в нём опечатка."
+
+
 async def _proceed(bot: Bot, chat_id: int, message_id: int, tg_id: int,
                    state: FSMContext, lava, cfg: BookingConfig,
                    product: str, currency: str, booking_id: int,
@@ -221,9 +242,9 @@ async def _proceed(bot: Bot, chat_id: int, message_id: int, tg_id: int,
         await _show_consents(bot, chat_id, message_id, product, currency, booking_id, missing)
         return
     email = await _saved_email(tg_id)
-    if email and not _valid_email(email):  # сохранён до проверки на латиницу
+    if email and not _valid_email(email):  # сохранён до нынешней проверки
         await _ask_email(bot, chat_id, message_id, state, product, currency, booking_id,
-                         reason=EMAIL_LATIN_HINT)
+                         reason=email_problem(email))
         return
     if not email:
         await _ask_email(bot, chat_id, message_id, state, product, currency, booking_id)
@@ -276,7 +297,17 @@ async def _issue_invoice(bot: Bot, chat_id: int, message_id: int, tg_id: int,
         if e.email_invalid:
             await _ask_email(bot, chat_id, message_id, state, product, currency,
                              booking_id, reason="lava.top не принял этот email. "
-                             + EMAIL_LATIN_HINT)
+                             + email_problem(email))
+            # Наша проверка адрес пропустила, а lava.top — нет: правило, о
+            # котором мы не знаем. Лане — адрес и текст ошибки, чтобы помочь
+            # клиенту и чтобы правило можно было добавить в EMAIL_RE.
+            who = await pay.booking_client_line(tg_id)
+            await pay.notify_admins(
+                bot, admin_ids or [],
+                "⚠️ <b>lava.top не принял email клиента</b>\n\n"
+                f"<b>Email:</b> <code>{html.quote(email)}</code>\n{who}\n\n"
+                f"<code>{html.quote(str(e)[:500])}</code>",
+            )
             return
         logger.exception("lava.top: не выставил счёт (%s, %s)", product, currency)
         await edit_screen(bot, chat_id, message_id, PAY_UNAVAILABLE_TEXT,
@@ -415,8 +446,7 @@ async def on_email(message: Message, bot: Bot, state: FSMContext,
         return
     email = (message.text or "").strip()
     if not _valid_email(email):
-        reason = ("Это не похоже на email." if "@" not in email
-                  else "Не получилось разобрать адрес. " + EMAIL_LATIN_HINT)
+        reason = email_problem(email)
         await edit_screen(bot, chat_id, screen_id,
                           EMAIL_RETRY_TEXT.format(reason=reason),
                           lava_email_kb(product, int(bid)))
