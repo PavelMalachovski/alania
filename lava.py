@@ -25,10 +25,17 @@ OFFERS = {
 }
 CURRENCIES = ("RUB", "EUR")
 
-# Статусы счёта у lava.top
+# Статусы счёта — в нашей нормализованной форме (normalize_status): живой API
+# отдаёт их по-разному — «new» в ответе на создание и «IN_PROGRESS»,
+# «COMPLETED», «FAILED» в GET /api/v1/invoices (SDK обещал «in-progress»).
 PENDING = ("new", "in-progress")
 COMPLETED = "completed"
 FAILED = ("failed", "cancelled")
+
+
+def normalize_status(raw: str | None) -> str:
+    """«IN_PROGRESS» / «in-progress» / «new» → «in-progress» / «new»."""
+    return (raw or "").strip().lower().replace("_", "-")
 
 
 class LavaError(Exception):
@@ -71,10 +78,17 @@ class LavaClient:
                     except ValueError:
                         data = {}
                     if resp.status >= 400:
-                        details = (data or {}).get("details") or {}
+                        data = data if isinstance(data, dict) else {}
+                        details = data.get("details") or {}
+                        # «email» в details — обычная валидация; кириллический
+                        # адрес lava.top отвергает другим путём: «Provided
+                        # string value does not match email format» с пустыми
+                        # details. Оба — ошибка email, а не «lava.top лежит».
+                        message = str(data.get("error") or "").lower()
                         raise LavaError(
                             f"lava.top {method} {path}: {resp.status} {data}",
-                            email_invalid=resp.status == 400 and "email" in details,
+                            email_invalid=resp.status == 400
+                            and ("email" in details or "email" in message),
                         )
                     return data or {}
         except aiohttp.ClientError as e:
@@ -94,7 +108,7 @@ class LavaClient:
             raise LavaError(f"lava.top: в ответе нет id/paymentUrl: {data}")
         return Invoice(
             id=data["id"],
-            status=data.get("status", "new"),
+            status=normalize_status(data.get("status")) or "new",
             payment_url=data["paymentUrl"],
             amount=float(amount.get("amount") or 0),
             currency=amount.get("currency") or currency,
@@ -102,4 +116,4 @@ class LavaClient:
 
     async def invoice_status(self, invoice_id: str) -> str:
         data = await self._request("GET", f"/api/v1/invoices/{invoice_id}")
-        return data.get("status", "")
+        return normalize_status(data.get("status"))

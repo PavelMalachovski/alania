@@ -97,3 +97,38 @@ def test_from_env(monkeypatch):
     assert LavaClient.from_env() is None
     monkeypatch.setenv("LAVA_API_KEY", "  k  ")
     assert LavaClient.from_env() is not None
+
+
+@pytest.mark.asyncio
+async def test_status_case_is_normalized():
+    """Живой GET /api/v1/invoices/{id} отдаёт «COMPLETED»/«IN_PROGRESS»,
+    а не «completed»/«in-progress», как обещал SDK. Без нормализации
+    оплату бот не видел никогда."""
+    statuses = iter(["COMPLETED", "IN_PROGRESS", "FAILED"])
+
+    async def handler(request):
+        return web.json_response({"id": "x", "status": next(statuses)})
+
+    server, client = await _serve([("GET", "/api/v1/invoices/{iid}", handler)])
+    try:
+        got = [await client.invoice_status("x") for _ in range(3)]
+    finally:
+        await server.close()
+    assert got == ["completed", "in-progress", "failed"]
+
+
+@pytest.mark.asyncio
+async def test_cyrillic_email_rejection_is_an_email_error():
+    """Так lava.top отвечает на кириллический адрес — пустые details. Раньше
+    это читалось как «lava.top недоступен» навсегда (email сохранён)."""
+    async def handler(request):
+        return web.json_response({"error": "Provided string value does not match email format",
+                                  "details": {}}, status=400)
+
+    server, client = await _serve([("POST", "/api/v2/invoice", handler)])
+    try:
+        with pytest.raises(LavaError) as e:
+            await client.create_invoice("анна@почта.рф", "offer-1", "RUB")
+    finally:
+        await server.close()
+    assert e.value.email_invalid is True

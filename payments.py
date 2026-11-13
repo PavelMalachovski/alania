@@ -36,6 +36,10 @@ from ui import delete_safe
 
 logger = logging.getLogger(__name__)
 
+# для handlers/payments.py (импортирует этот модуль целиком, см. там)
+notify_admins = _notify_admins
+booking_client_line = client_line_for
+
 # expired — счёт, который опрос бросил (GIVE_UP_AFTER). Кнопка «✓ Я оплатил(а)»
 # его всё равно проверяет: заплатить могли и позже.
 _CLAIMABLE = PENDING + ("expired",)

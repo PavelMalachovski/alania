@@ -34,8 +34,16 @@ python main.py
 - `lava.py` — `LavaClient` для `https://gate.lava.top` (ключ в заголовке
   `X-Api-Key`): `create_invoice(email, offer_id, currency)` →
   `POST /api/v2/invoice`, `invoice_status(id)` → `GET /api/v1/invoices/{id}`.
-  `LavaError.email_invalid` — 400 с `details.email` (lava.top сам валидирует
-  email): клиента просят ввести адрес заново. `OFFERS` — id офферов сессии,
+  `LavaError.email_invalid` — 400 с `details.email` **или** с «email» в тексте
+  ошибки (кириллический адрес lava.top отвергает как «Provided string value
+  does not match email format» с пустыми `details`): клиента просят ввести
+  адрес заново. Статусы счёта живой API отдаёт в разном регистре («new» при
+  создании, «IN_PROGRESS»/«COMPLETED»/«FAILED» в GET) — клиент приводит их
+  `normalize_status()` к «in-progress»/«completed»/«failed»; без этого оплату
+  бот не видел. Email в боте — только латиница (`EMAIL_RE`): на русской
+  раскладке в «gmail» попадает кириллическая «а», а lava.top такой адрес не
+  примет; сохранённый ранее невалидный адрес переспрашивается. Любой другой
+  отказ lava.top при выставлении счёта уходит Лане с текстом ошибки. `OFFERS` — id офферов сессии,
   курса и игры из кабинета (`GET /api/v2/products?feedVisibility=ALL`: курс
   и игра там скрыты из витрины, без `ALL` их не видно). Цена — в оффере,
   бот шлёт только id и валюту (`RUB`/`EUR`).
