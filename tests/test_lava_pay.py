@@ -470,3 +470,43 @@ async def test_paid_message_confirms_contract_and_waiver(env):
            and "Запись подтверждена" in (d.get("text") or "")][-1]
     assert "Публичной оферты" in msg["text"] and "до истечения 14 дней" in msg["text"]
     assert msg["link_preview_options"]["is_disabled"] is True
+
+
+@pytest.mark.asyncio
+async def test_cyrillic_lookalike_email_is_refused_with_hint(env):
+    """«gmаil» с кириллической «а» с русской раскладки: выглядит нормально,
+    но lava.top его не примет — останавливаем на вводе и подсказываем."""
+    dp, bot, gcal, session = env
+    bid = await _hold(dp, bot, session)
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    await _send_text(dp, bot, "anna@gmаil.com", mid=8301)
+    assert "латиницей" in _last_edit(session)["text"]
+    assert dp["lava"].created == []
+    async with get_session() as s:
+        user = await s.get(User, CLIENT_ID)
+    assert user is None or user.email is None
+
+
+@pytest.mark.asyncio
+async def test_saved_bad_email_is_asked_again(env):
+    """Адрес, сохранённый до проверки на латиницу, не должен вечно давать
+    «Оплата недоступна» — бот просит ввести его заново."""
+    dp, bot, gcal, session = env
+    await _save_email("anna@gmаil.com")
+    bid = await _hold(dp, bot, session)
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    assert "латиницей" in _last_edit(session)["text"]
+    assert dp["lava"].created == []
+    await _send_text(dp, bot, EMAIL, mid=8302)
+    assert dp["lava"].created == [(EMAIL, OFFERS["session"], "RUB")]
+
+
+@pytest.mark.asyncio
+async def test_lava_error_reaches_lana_with_reason(env):
+    dp, bot, gcal, session = env
+    await _save_email()
+    bid = await _hold(dp, bot, session)
+    dp["lava"].fail = "down"
+    await _pay(dp, bot, session, f"lava_pay:session:RUB:{bid}")
+    assert any("не выставил счёт" in t and "lava down" in t and EMAIL in t
+               for t in _admin_texts(session))

@@ -57,7 +57,13 @@ from ui import delete_safe, edit_screen
 router = Router()
 logger = logging.getLogger(__name__)
 
-EMAIL_RE = re.compile(r"[^@\s<>&\"']+@[^@\s<>&\"']+\.[^@\s<>&\"']+")
+# Только латиница: lava.top кириллицу в адресе не принимает, а на русской
+# раскладке в «gmail» легко попадает кириллическая «а» — снаружи не отличить.
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+EMAIL_LATIN_HINT = (
+    "Адрес нужен латиницей — проверь, что клавиатура английская "
+    "(русская «а», «о» или «с» выглядят так же, но lava.top их не примет)."
+)
 
 _NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 
@@ -201,20 +207,29 @@ async def _show_consents(bot: Bot, chat_id: int, message_id: int, product: str,
                       link_preview_options=_NO_PREVIEW)
 
 
+def _valid_email(email: str) -> bool:
+    return len(email) <= 254 and EMAIL_RE.fullmatch(email) is not None
+
+
 async def _proceed(bot: Bot, chat_id: int, message_id: int, tg_id: int,
                    state: FSMContext, lava, cfg: BookingConfig,
-                   product: str, currency: str, booking_id: int) -> None:
+                   product: str, currency: str, booking_id: int,
+                   admin_ids: list[int] | None = None) -> None:
     """Дальше по шагам: подтверждения → email → счёт."""
     missing = await _missing_consents(tg_id, state, product, booking_id)
     if missing:
         await _show_consents(bot, chat_id, message_id, product, currency, booking_id, missing)
         return
     email = await _saved_email(tg_id)
+    if email and not _valid_email(email):  # сохранён до проверки на латиницу
+        await _ask_email(bot, chat_id, message_id, state, product, currency, booking_id,
+                         reason=EMAIL_LATIN_HINT)
+        return
     if not email:
         await _ask_email(bot, chat_id, message_id, state, product, currency, booking_id)
         return
     await _issue_invoice(bot, chat_id, message_id, tg_id, state, lava, cfg,
-                         product, currency, booking_id, email)
+                         product, currency, booking_id, email, admin_ids=admin_ids)
 
 
 async def _ask_email(bot: Bot, chat_id: int, message_id: int, state: FSMContext,
@@ -234,7 +249,8 @@ async def _ask_email(bot: Bot, chat_id: int, message_id: int, state: FSMContext,
 async def _issue_invoice(bot: Bot, chat_id: int, message_id: int, tg_id: int,
                          state: FSMContext, lava: LavaClient | None,
                          cfg: BookingConfig, product: str, currency: str,
-                         booking_id: int, email: str) -> None:
+                         booking_id: int, email: str, *,
+                         admin_ids: list[int] | None = None) -> None:
     """Выставить счёт lava.top и показать экран со ссылкой на оплату."""
     missing = await _missing_consents(tg_id, state, product, booking_id)
     if missing:  # без подтверждений счёт не выставляем (оферта п. 7.2.1)
@@ -259,11 +275,22 @@ async def _issue_invoice(bot: Bot, chat_id: int, message_id: int, tg_id: int,
     except LavaError as e:
         if e.email_invalid:
             await _ask_email(bot, chat_id, message_id, state, product, currency,
-                             booking_id, reason="lava.top не принял этот email.")
+                             booking_id, reason="lava.top не принял этот email. "
+                             + EMAIL_LATIN_HINT)
             return
         logger.exception("lava.top: не выставил счёт (%s, %s)", product, currency)
         await edit_screen(bot, chat_id, message_id, PAY_UNAVAILABLE_TEXT,
                           lava_error_kb(product, currency, booking_id))
+        # Лане — с текстом ошибки: клиент видит только «недоступна», а без
+        # причины такой сбой из чата не разобрать
+        who = await pay.booking_client_line(tg_id)
+        await pay.notify_admins(
+            bot, admin_ids or [],
+            "⚠️ <b>Клиент не смог оплатить: lava.top не выставил счёт</b>\n\n"
+            f"<b>Продукт:</b> {pay.PRODUCT_TITLES[product]} ({currency})\n"
+            f"<b>Email:</b> {html.quote(email)}\n{who}\n\n"
+            f"<code>{html.quote(str(e)[:500])}</code>",
+        )
         return
 
     now = datetime.now(timezone.utc)
@@ -311,6 +338,7 @@ async def _issue_invoice(bot: Bot, chat_id: int, message_id: int, tg_id: int,
 @router.callback_query(F.data.startswith("lava_pay:"))
 async def cb_lava_pay(callback: CallbackQuery, bot: Bot, state: FSMContext,
                       booking_config: BookingConfig,
+                      admin_ids: list[int] | None = None,
                       lava: LavaClient | None = None) -> None:
     parsed = _parse_pay(callback.data)
     if parsed is None:
@@ -324,12 +352,14 @@ async def cb_lava_pay(callback: CallbackQuery, bot: Bot, state: FSMContext,
             await callback.answer(held, show_alert=True)
             return
     await _proceed(bot, callback.message.chat.id, callback.message.message_id, tg_id,
-                   state, lava, booking_config, product, currency, booking_id)
+                   state, lava, booking_config, product, currency, booking_id,
+                   admin_ids=admin_ids)
 
 
 @router.callback_query(F.data.startswith("lava_ok:"))
 async def cb_lava_ok(callback: CallbackQuery, bot: Bot, state: FSMContext,
                      booking_config: BookingConfig,
+                     admin_ids: list[int] | None = None,
                      lava: LavaClient | None = None) -> None:
     """Одно подтверждение = одно нажатие. Записываем момент и идём дальше:
     остались неподтверждённые — тот же экран, нет — к email/счёту."""
@@ -355,7 +385,8 @@ async def cb_lava_ok(callback: CallbackQuery, bot: Bot, state: FSMContext,
         waivers[_order_key(product, booking_id)] = now.isoformat()
         await state.update_data(waivers=waivers)
     await _proceed(bot, callback.message.chat.id, callback.message.message_id, tg_id,
-                   state, lava, booking_config, product, currency, booking_id)
+                   state, lava, booking_config, product, currency, booking_id,
+                   admin_ids=admin_ids)
 
 
 @router.callback_query(F.data.startswith("lava_email:"))
@@ -372,6 +403,7 @@ async def cb_lava_email(callback: CallbackQuery, bot: Bot, state: FSMContext) ->
 @router.message(PayForm.email)
 async def on_email(message: Message, bot: Bot, state: FSMContext,
                    booking_config: BookingConfig,
+                   admin_ids: list[int] | None = None,
                    lava: LavaClient | None = None) -> None:
     data = await state.get_data()
     chat_id = message.chat.id
@@ -382,15 +414,18 @@ async def on_email(message: Message, bot: Bot, state: FSMContext,
         await state.set_state(None)
         return
     email = (message.text or "").strip()
-    if len(email) > 254 or not EMAIL_RE.fullmatch(email):
+    if not _valid_email(email):
+        reason = ("Это не похоже на email." if "@" not in email
+                  else "Не получилось разобрать адрес. " + EMAIL_LATIN_HINT)
         await edit_screen(bot, chat_id, screen_id,
-                          EMAIL_RETRY_TEXT.format(reason="Это не похоже на email."),
+                          EMAIL_RETRY_TEXT.format(reason=reason),
                           lava_email_kb(product, int(bid)))
         return
     await state.set_state(None)
     await _save_email(message.from_user.id, email)
     await _issue_invoice(bot, chat_id, screen_id, message.from_user.id, state, lava,
-                         booking_config, product, currency, int(bid), email)
+                         booking_config, product, currency, int(bid), email,
+                         admin_ids=admin_ids)
 
 
 @router.callback_query(F.data.startswith("lava_back:"))
